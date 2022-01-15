@@ -15,6 +15,7 @@ const pages = [
   { label: "Consultations à domicile", route: "/domicile" },
   { label: "Suivi à distance", route: "/distance" },
   { label: "Prendre RDV", route: "/meeting" },
+  {label: "Boutique", route: "/boutique"}
 ];
 
 const LinkBehavior = React.forwardRef((props, ref) => {

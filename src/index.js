@@ -12,7 +12,7 @@ import { grey } from '@mui/material/colors';
 let theme = createTheme({
   palette: {
     background: {
-      default: "#fefefe",
+      default: "#f4f4f4",
     },
     info: {
       // Purple and green play nicely together.
