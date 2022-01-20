@@ -9,25 +9,90 @@ import {
 import { useState } from "react";
 
 import BoiteMenuImage from "../../assets/imageBoiteMenu.jpg";
+import { usePanierContext } from "../../hooks/usePanierContext";
+
 const mounthPrice = {
-  mensuel: "10€/mois",
-  biAnnuel: "9€/mois",
-  annuel: "8€/mois",
+  mensuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule sans engagement paiement mensuel",
+    interval:"month",
+    interval_count:"1",
+    textPrix: "10€/mois",
+    prix: 10,
+    paymentMode:"subscription"
+  },
+  biAnnuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule engagement 6 mois paiement mensuel",
+    textPrix: "9€/mois",
+    interval:"month",
+    interval_count:"1",
+    prix: 9,
+    paymentMode:"subscription"
+  },
+  annuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule engagement 12 mois paiement mensuel",
+    textPrix: "8€/mois",
+    interval:"month",
+    interval_count:"1",
+    prix: 8,
+    paymentMode:"subscription"
+  },
 };
 const yearlyPrice = {
-  mensuel: "Non compatible",
-  biAnnuel: "50€",
-  annuel: "90€",
+  mensuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule mensuel",
+    textPrix: "Non compatible",
+    prix: 0,
+    paymentMode:"payment"
+  },
+  biAnnuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule engagement 6 mois paiement unique",
+    textPrix: "50€",
+    interval:"month",
+    interval_count:"6",
+    prix: 50,
+    paymentMode:"subscription"
+  },
+  annuel: {
+    nom: "La boite à menus de Sarah",
+    infoText: "formule engagement 12 mois paiement unique",
+    textPrix: "90€",
+    prix: 90,
+    paymentMode:"payment"
+  },
 };
+
 export default function BoiteMenu() {
   const [checked, setChecked] = useState(false);
   const [price, setPrice] = useState(mounthPrice);
+  const { items, dispatch } = usePanierContext();
+  const [added, setAdded] = useState(false);
 
   const handleChange = (event) => {
     setChecked(event.target.checked);
     if (event.target.checked) setPrice(yearlyPrice);
     else setPrice(mounthPrice);
   };
+
+  const ajoutPanier = (item) => {
+    const exist = items.find((element) => element.nom === item.nom);
+    if (exist) setAdded(true);
+    else {
+      dispatch({
+        type: "ADD_ITEM",
+        payload: [
+          ...items,
+          item,
+        ],
+      });
+      setAdded(true);
+    }
+  };
+
   return (
     <Container maxWidth="lg">
       <Grid container py={5}>
@@ -184,6 +249,9 @@ export default function BoiteMenu() {
           <Typography>Annuel</Typography>
         </Box>
       </Box>
+      <Box textAlign="center">
+        {added && <Typography>Ajouté au panier</Typography>}
+      </Box>
       <Grid container spacing={2} pt={3} pb={10}>
         <Grid item xs={4}>
           <Box
@@ -202,14 +270,18 @@ export default function BoiteMenu() {
             </Typography>
 
             <Typography py={3} textAlign="center">
-              {price.mensuel}
+              {price.mensuel.textPrix}
             </Typography>
             {checked ? (
               <Button size="large" variant="outlined" disabled>
                 Je choisis cette formule
               </Button>
             ) : (
-              <Button size="large" variant="outlined">
+              <Button
+                size="large"
+                variant="outlined"
+                onClick={() => ajoutPanier(price.mensuel)}
+              >
                 Je choisis cette formule
               </Button>
             )}
@@ -234,9 +306,13 @@ export default function BoiteMenu() {
               renouvelable
             </Typography>
             <Typography py={3} textAlign="center">
-              {price.biAnnuel}
+              {price.biAnnuel.textPrix}
             </Typography>
-            <Button size="large" variant="outlined">
+            <Button
+              size="large"
+              variant="outlined"
+              onClick={() => ajoutPanier(price.biAnnuel)}
+            >
               Je choisis cette formule
             </Button>
           </Box>
@@ -259,10 +335,14 @@ export default function BoiteMenu() {
               Accès aux semaines de menus avec un engagement de 12 mois*.
             </Typography>
             <Typography py={3} textAlign="center">
-              {price.annuel}
+              {price.annuel.textPrix}
             </Typography>
 
-            <Button size="large" variant="outlined">
+            <Button
+              size="large"
+              variant="outlined"
+              onClick={() => ajoutPanier(price.annuel)}
+            >
               Je choisis cette formule
             </Button>
           </Box>

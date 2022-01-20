@@ -89,7 +89,6 @@ export default function Meeting() {
       adresse,
       motif,
     };
-    console.log(data);
     await sendMail("sendContactMail", data);
   };
 

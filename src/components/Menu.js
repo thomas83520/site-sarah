@@ -7,7 +7,7 @@ import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import { Menu } from "@mui/material";
-import { NavLink } from "react-router-dom";
+import { NavLink,useLocation } from "react-router-dom";
 
 const pages = [
   { label: "Accueil", route: "/" },
@@ -33,7 +33,7 @@ const LinkBehavior = React.forwardRef((props, ref) => {
 
 export default function MenuDisplay() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
-
+  const {location}=useLocation();
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
   };
@@ -43,7 +43,7 @@ export default function MenuDisplay() {
   };
 
   return (
-    <Container
+   <Container
       maxWidth={false}
       sx={{
         borderTop: { md: "1px solid lightgrey", xs: "" },

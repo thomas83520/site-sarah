@@ -1,28 +1,33 @@
 import { projectFunctions } from "../firebase/config";
-import { useReducer, useState,useEffect } from "react";
+import { useReducer, useState, useEffect } from "react";
 
 let initalState = {
   isPending: false,
   error: null,
   success: null,
+  data:null,
 };
 
 const functionsReducer = (state, action) => {
   switch (action.type) {
     case "IS_PENDING":
       return {
+        ...state,
         isPending: true,
         success: null,
         error: null,
       };
     case "SUCCESS":
       return {
+        ...state,
         isPending: false,
         success: true,
         error: null,
+        data: action.payload,
       };
     case "ERROR":
       return {
+        ...state,
         isPending: false,
         success: null,
         error: action.payload,
@@ -43,17 +48,27 @@ export const useFunctions = () => {
     }
   };
 
-  const sendMail = async (functionName,functionData) => {
+  const sendMail = async (functionName, functionData) => {
     dispatch({ type: "IS_PENDING" });
     try {
-        console.log('try')
-        var functions = projectFunctions.httpsCallable(functionName);
-        console.log("func");
+      var functions = projectFunctions.httpsCallable(functionName);
       const response = await functions(functionData);
-      console.log("response",response);
-      dispatchIfNotCancelled({ type: "SUCCESS" });
+      dispatchIfNotCancelled({ type: "SUCCESS", payload: response });
     } catch (e) {
-      console.log("error",e);
+      console.log("error", e);
+      dispatchIfNotCancelled({ type: "ERROR", payload: e });
+    }
+  };
+
+  const createStripeCheckout = async (functionName, functionData) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      var functions = projectFunctions.httpsCallable(functionName);
+      const response = await functions(functionData);
+      console.log(response);
+      dispatchIfNotCancelled({ type: "SUCCESS", payload: response });
+    } catch (e) {
+      console.log("error", e);
       dispatchIfNotCancelled({ type: "ERROR", payload: e });
     }
   };
@@ -62,5 +77,5 @@ export const useFunctions = () => {
     return () => setIsCancelled(true);
   }, []);
 
-  return { sendMail, response };
+  return { sendMail,createStripeCheckout, response };
 };

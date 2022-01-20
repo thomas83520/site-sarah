@@ -13,6 +13,7 @@ export default function Footer() {
       justifyContent="center"
       alignItems="center"
       sx={{ position: "relative" }}
+      mt="auto"
     >
       <BoxImage src={FooterImage} alt="Footer image" />
       <Grid container spacing={5} sx={{ position: "absolute" }}>

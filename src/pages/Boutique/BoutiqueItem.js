@@ -1,11 +1,15 @@
 import { Box, Typography } from "@mui/material";
 import { useHistory } from "react-router-dom";
+import { usePanierContext } from "../../hooks/usePanierContext";
 
 export default function BoutiqueItem({ image, title, prix, path }) {
+  const {items,dispatch } = usePanierContext();
   const history = useHistory();
+
   const handleClick = () => {
     history.push(path);
   };
+
   return (
     <Box py={10}>
       <Box >

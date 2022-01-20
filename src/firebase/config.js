@@ -1,5 +1,8 @@
 import firebase from 'firebase/app';
 import 'firebase/functions';
+import 'firebase/storage';
+import 'firebase/auth';
+import 'firebase/firestore'
 
 const firebaseConfig = {
     apiKey: "AIzaSyAIxMZwPrTBgM2JQz4ZVsGMiwesfWFNx-A",
@@ -14,5 +17,12 @@ const firebaseConfig = {
   firebase.initializeApp(firebaseConfig);
 
   const projectFunctions= firebase.app().functions('europe-west1');
+  const projectAuth = firebase.auth();
+  const projectStorage = firebase.storage();
+  const projectFirestore = firebase.firestore();
 
-  export {projectFunctions}
+  //Timestamp
+  const timestamp = firebase.firestore.Timestamp;
+
+
+  export {projectFunctions,projectStorage,projectFirestore,projectAuth,timestamp}
