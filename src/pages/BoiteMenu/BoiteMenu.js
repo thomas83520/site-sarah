@@ -19,7 +19,12 @@ const mounthPrice = {
     interval_count:"1",
     textPrix: "10€/mois",
     prix: 10,
-    paymentMode:"subscription"
+    paymentMode:"subscription",
+    metadata:{
+      'asEngagement' : false,
+      'engagementDuree' : null,
+      'periodePaye' : 1
+    }
   },
   biAnnuel: {
     nom: "La boite à menus de Sarah",
@@ -28,7 +33,12 @@ const mounthPrice = {
     interval:"month",
     interval_count:"1",
     prix: 9,
-    paymentMode:"subscription"
+    paymentMode:"subscription",
+    metadata:{
+      'asEngagement' : true,
+      'engagementDuree' : 6,
+      'periodePaye':1
+    }
   },
   annuel: {
     nom: "La boite à menus de Sarah",
@@ -37,7 +47,12 @@ const mounthPrice = {
     interval:"month",
     interval_count:"1",
     prix: 8,
-    paymentMode:"subscription"
+    paymentMode:"subscription",
+    metadata:{
+      'asEngagement' : true,
+      'engagementDuree' : 12,
+      'periodePaye':1
+    }
   },
 };
 const yearlyPrice = {
@@ -46,7 +61,13 @@ const yearlyPrice = {
     infoText: "formule mensuel",
     textPrix: "Non compatible",
     prix: 0,
-    paymentMode:"payment"
+    paymentMode:"payment",
+    metadata:{
+      'asEngagement' : false,
+      'engagementDuree' : null,
+
+      'periodePaye': 0,
+    }
   },
   biAnnuel: {
     nom: "La boite à menus de Sarah",
@@ -55,14 +76,24 @@ const yearlyPrice = {
     interval:"month",
     interval_count:"6",
     prix: 50,
-    paymentMode:"subscription"
+    paymentMode:"subscription",
+    metadata:{
+      'asEngagement' : true,
+      'engagementDuree' : 6,
+      'periodePaye': 6,
+    }
   },
   annuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule engagement 12 mois paiement unique",
     textPrix: "90€",
     prix: 90,
-    paymentMode:"payment"
+    paymentMode:"payment",
+    metadata:{
+      'asEngagement' : false,
+      'engagementDuree' : null,
+      'periodePaye': 12,
+    }
   },
 };
 

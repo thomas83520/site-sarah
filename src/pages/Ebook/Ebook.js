@@ -13,7 +13,17 @@ export default function Ebook() {
     else {
       dispatch({
         type: "ADD_ITEM",
-        payload: [...items, { nom: "Ebook",infoText:"On mange quoi demain? version hiver",textPrix: "12€",prix:12,paymentType:"payment" }],
+        payload: [
+          ...items,
+          {
+            nom: "Ebook",
+            infoText: "On mange quoi demain? version hiver",
+            textPrix: "12€",
+            prix: 12,
+            paymentType: "payment",
+            metadata: {'productName' : 'Ebookhiver'}
+          },
+        ],
       });
       setAdded(true);
     }

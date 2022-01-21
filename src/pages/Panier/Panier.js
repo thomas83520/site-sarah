@@ -13,7 +13,7 @@ export default function Panier() {
   const stripe = useStripe();
   const elements = useElements();
   const TotalPrice = items.reduce((p, c) => p + c.prix, 0);
-  const { createStripeCheckout, response } = useFunctions();
+  const { createStripeCheckout, createOrder, response } = useFunctions();
   const { user } = useAuthContext();
 
   const boutiqueClick = () => {
@@ -23,27 +23,33 @@ export default function Panier() {
   const handleCheckout = async () => {
     if (!user) history.push("/login");
     let paymentMode = "payment";
+    let payment_intent_data = {};
+    let subscription_data = {}
     let line_items = items.map((item) => {
-      console.log("item",item);
-      console.log("item payment mode",item.paymentMode)
       if (item.paymentMode === "subscription") {
-        paymentMode="subscription";
+        paymentMode = "subscription";
+        subscription_data.metadata = {
+          asEngagement : item.asEngagement,
+          dureeEngagement : item.engagementDuree,
+          periodePayer : item.periodePayer,
+        }
         return {
           quantity: 1,
           price_data: {
             currency: "eur",
             unit_amount: item.prix * 100,
             product_data: {
-              name:item.nom,
-              description:item.infoText
+              name: item.nom,
+              description: item.infoText,
             },
-            recurring:{
-              interval : item.interval,
-              interval_count : item.interval_count,
-            }
+            recurring: {
+              interval: item.interval,
+              interval_count: item.interval_count,
+            },
           },
-        }
+        };
       } else {
+        
         return {
           quantity: 1,
           price_data: {
@@ -57,9 +63,13 @@ export default function Panier() {
         };
       }
     });
+    const orderID = await createOrder(items);
     createStripeCheckout("createStripeCheckout", {
       paymentMode,
       line_items,
+      metadata: { orderId: orderID },
+      subscription_data: { metadata: { orederId: "orderId" } },
+
     });
   };
 

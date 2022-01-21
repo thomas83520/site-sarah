@@ -5,7 +5,7 @@ let initalState = {
   isPending: false,
   error: null,
   success: null,
-  data:null,
+  data: null,
 };
 
 const functionsReducer = (state, action) => {
@@ -72,10 +72,22 @@ export const useFunctions = () => {
       dispatchIfNotCancelled({ type: "ERROR", payload: e });
     }
   };
+
+  const createOrder = async (items) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      var functions = projectFunctions.httpsCallable("createOrder");
+      const response = await functions({ items: items });
+      return response.data;
+    } catch (e) {
+      console.log(e);
+      return;
+    }
+  };
   //clean up functions
   useEffect(() => {
     return () => setIsCancelled(true);
   }, []);
 
-  return { sendMail,createStripeCheckout, response };
+  return { sendMail, createStripeCheckout, createOrder, response };
 };

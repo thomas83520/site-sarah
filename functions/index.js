@@ -55,11 +55,21 @@ exports.createStripeCheckout = functions
       success_url: "http://localhost:3000/success",
       cancel_url: "http://localhost:3000/cancel",
       line_items: data.line_items,
+      metadata: data.metadata,
     });
 
     return {
       id: session.id,
     };
+  });
+
+exports.createOrder = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    const docRef = await db
+      .collection("orders")
+      .add({ userId: context.auth.uid, items: data.items });
+    return docRef.id;
   });
 
 exports.createStripeCustomers = functions
@@ -102,94 +112,105 @@ exports.recurringPayment = functions
 
     const snapshot = await db.collection("customers").doc(data.customer).get();
     const userId = snapshot.data().userId;
-    if (hook === "payment_intent.succeeded")
-      await db
-        .collection("customers")
-        .doc(data.customer)
-        .collection("succeed")
-        .add({
-          customer: data.customer,
-          id: data.id,
-          amount: data.amount,
-          currency: data.currency,
-          charges: data.charges,
-          data: data,
-        });
-    else if (
+    if (
       hook === "checkout.session.completed" &&
       data.payment_status === "paid"
     ) {
+      await db.collection("checkout").add({ data: data });
+      if (data.mode === "subscription") {
+        const dt = new Date();
+        const nextyear = Math.floor(
+          new Date(
+            new Date().setFullYear(
+              new Date().getFullYear() + 1,
+              new Date().getMonth(),
+              new Date().getDay() - 1
+            )
+          ).getTime() / 1000
+        );
+        functions.logger.log(nextyear.toString());
+        const subscription = await stripe.subscriptions.update(
+          data.subscription,
+          { cancel_at: nextyear }
+        );
+        await db.collection("subscription").add({ subscription: subscription });
+      }
+      handleCheckoutEnd(data.metadata.orderId, data.customer_details.email);
+    } else if (hook === "invoice.payment_succeeded") {
+      //User :
+      //abonnement ON
+      //bool : engagement ?
+      //fin engagement
+      //période payer
+      //orderId[]
       await db
         .collection("customers")
         .doc(data.customer)
-        .collection("sessionCompleted")
-        .add({
-          data: data,
-        });
-      const completedSession = await stripe.checkout.sessions.listLineItems(
-        data.id
-      );
+        .collection("invoice_succeeded")
+        .add({ data });
+    } else if (hook === "invoice.payment_failed") {
+      //sendMail abonnement fail
+      //abonnement en attente
+      //1 semaine après finir abonnement ( date rejet puis functions planifié)
       await db
         .collection("customers")
         .doc(data.customer)
-        .collection("sessionCompleted")
-        .doc("listItem")
-        .set({
-          data: completedSession,
-        });
-      completedSession.data.forEach(async (element) => {
-        const product = await stripe.products.retrieve(element.price.product);
-        functions.logger.log("description",element.description);
-        if (element.description === "Ebook") {
-          sendEbook(data.customer_details.email);
-        }
-        if(element.description === "La boite à menus de Sarah")
-        {
-          functions.logger.log("boites à menus");
-          let weekNumber = getWeek(new Date());
-          functions.logger.log("week number",weekNumber);
-          //TODO:Add menus to storage 
-          //Get menus de la semaine
-          //Envoyé par mail le premier menu
-        }
-      });
-    } else
-      await db
-        .collection("customers")
-        .doc(data.customer)
-        .collection("other")
-        .add({ hook: hook, data: data });
-
-
-    //TODO: Ajouter les webhook pour les abonnements
-
-
-
+        .collection("invoice_failed")
+        .add({ data });
+    }
     return res.status(200).send(`successfully handled ${hook}`);
   });
 
-async function sendEbook(email) {
-  functions.logger.log("email", email);
+async function sendBuyedItem(items, email) {
+  functions.logger.log("sendbuyeditem");
   const bucket = admin.storage().bucket();
   const tempFilePath = path.join(os.tmpdir(), "fileName");
-  await bucket.file("ebook.pdf").download({ destination: tempFilePath });
-  functions.logger.log("Image downloaded locally to", tempFilePath);
-  attachment = fs.readFileSync(tempFilePath).toString("base64");
-  const msg = {
-    to: email,
-    from: "contact@dietup.fr", //TODO : change email
-    templateId: SEND_EBOOK_TEMPLATE_ID,
-    attachments: [
-      {
+  let attachedDoc = [];
+
+  for (const item of items) {
+    if (item.nom.includes("Ebook")) {
+      await bucket.file("ebook.pdf").download({ destination: tempFilePath });
+      attachment = fs.readFileSync(tempFilePath).toString("base64");
+      attachedDoc.push({
         content: attachment,
         filename: "ebookhiver.pdf",
         type: "application/pdf",
         disposition: "attachment",
-      },
-    ],
+      });
+    } else if (item.nom.includes("boite à menus")) {
+      await bucket
+        .file("BoiteMenu/" + getWeek(new Date()) + ".pdf")
+        .download({ destination: tempFilePath });
+      attachment = fs.readFileSync(tempFilePath).toString("base64");
+      attachedDoc.push({
+        content: attachment,
+        filename: "Boite à menu.pdf",
+        type: "application/pdf",
+        disposition: "attachment",
+      });
+    }
+  }
+
+  const msg = {
+    to: email,
+    from: "contact@dietup.fr", //TODO : change email
+    templateId: SEND_EBOOK_TEMPLATE_ID,
+    attachments: attachedDoc,
   };
   await sgMail.send(msg).catch((err) => {
-    console.log(err);
+    console.log("erreur", err);
+  });
+}
+
+async function sendConfirmationEmail(email) {
+  functions.logger.log("sendconfirmationEmail");
+  const msg = {
+    to: email,
+    from: "contact@dietup.fr", //TODO : change email
+    templateId: SEND_EBOOK_TEMPLATE_ID,
+  };
+  sgMail.send(msg).catch((err) => {
+    console.log("erreur", err);
   });
 }
 
@@ -198,4 +219,13 @@ function getWeek(dateTime) {
   var numberOfDays = Math.floor((dateTime - oneJan) / (24 * 60 * 60 * 1000));
   var result = Math.ceil((dateTime.getDay() + 1 + numberOfDays) / 7);
   return result;
+}
+
+async function handleCheckoutEnd(orderId, customerEmail) {
+  const snapshot = await db.collection("orders").doc(orderId).get();
+  const userId = snapshot.data().userId;
+
+  sendConfirmationEmail(customerEmail);
+
+  //sendBuyedItem(snapshot.data().items, customerEmail);
 }
