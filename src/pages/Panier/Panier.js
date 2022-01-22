@@ -29,9 +29,9 @@ export default function Panier() {
       if (item.paymentMode === "subscription") {
         paymentMode = "subscription";
         subscription_data.metadata = {
-          asEngagement : item.asEngagement,
-          dureeEngagement : item.engagementDuree,
-          periodePayer : item.periodePayer,
+          asEngagement : item.metadata.asEngagement,
+          dureeEngagement : item.metadata.engagementDuree,
+          periodePaye : item.metadata.periodePaye,
         }
         return {
           quantity: 1,
@@ -68,8 +68,6 @@ export default function Panier() {
       paymentMode,
       line_items,
       metadata: { orderId: orderID },
-      subscription_data: { metadata: { orederId: "orderId" } },
-
     });
   };
 

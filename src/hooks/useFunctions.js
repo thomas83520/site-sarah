@@ -84,10 +84,29 @@ export const useFunctions = () => {
       return;
     }
   };
+
+  const createPortalSession = async () => {
+    console.log("function");
+    dispatch({ type: "IS_PENDING" });
+    try {
+      var functions = projectFunctions.httpsCallable("createPortalSession");
+      const response = await functions();
+      return response.data;
+    } catch (e) {
+      console.log(e);
+      return;
+    }
+  };
   //clean up functions
   useEffect(() => {
     return () => setIsCancelled(true);
   }, []);
 
-  return { sendMail, createStripeCheckout, createOrder, response };
+  return {
+    sendMail,
+    createStripeCheckout,
+    createOrder,
+    createPortalSession,
+    response,
+  };
 };

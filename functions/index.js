@@ -93,6 +93,7 @@ exports.createStripeCustomers = functions
       });
   });
 
+//Handle webhook from stripe
 exports.recurringPayment = functions
   .region("europe-west1")
   .https.onRequest(async (req, res) => {
@@ -110,53 +111,59 @@ exports.recurringPayment = functions
 
     if (!data) throw new Error("missing data");
 
+    //Get user ID from customer id
     const snapshot = await db.collection("customers").doc(data.customer).get();
     const userId = snapshot.data().userId;
+
+    //Checkout end and paid
     if (
       hook === "checkout.session.completed" &&
       data.payment_status === "paid"
     ) {
       await db.collection("checkout").add({ data: data });
       if (data.mode === "subscription") {
-        const dt = new Date();
         const nextyear = Math.floor(
           new Date(
             new Date().setFullYear(
               new Date().getFullYear() + 1,
               new Date().getMonth(),
-              new Date().getDay() - 1
+              new Date().getDate() - 1
             )
           ).getTime() / 1000
         );
-        functions.logger.log(nextyear.toString());
-        const subscription = await stripe.subscriptions.update(
-          data.subscription,
-          { cancel_at: nextyear }
-        );
-        await db.collection("subscription").add({ subscription: subscription });
+        await stripe.subscriptions.update(data.subscription, {
+          cancel_at: nextyear,
+        });
+        setSubscriptionToUser(data.metadata.orderId);
       }
       handleCheckoutEnd(data.metadata.orderId, data.customer_details.email);
-    } else if (hook === "invoice.payment_succeeded") {
-      //User :
-      //abonnement ON
-      //bool : engagement ?
-      //fin engagement
-      //période payer
-      //orderId[]
+    }
+    // subscription payment paied
+    else if (hook === "invoice.payment_succeeded") {
+      //Set abonnement to "paid" -> in case it was fail
+      await db.collection("users").doc(userId).set(
+        {
+          abonnement: "paid",
+        },
+        { merge: true }
+      );
+    }
+    //Subscription payment failed
+    else if (hook === "invoice.payment_failed") {
+      //set abonnement to
       await db
-        .collection("customers")
-        .doc(data.customer)
-        .collection("invoice_succeeded")
-        .add({ data });
-    } else if (hook === "invoice.payment_failed") {
-      //sendMail abonnement fail
-      //abonnement en attente
-      //1 semaine après finir abonnement ( date rejet puis functions planifié)
-      await db
-        .collection("customers")
-        .doc(data.customer)
-        .collection("invoice_failed")
-        .add({ data });
+        .collection("users")
+        .doc(userId)
+        .set(
+          {
+            abonnement: "failed",
+            failedDate: admin.firestore.FieldValue.arrayUnion(
+              admin.firestore.Timestamp.fromDate(new Date())
+            ),
+          },
+          { merge: true }
+        );
+      //sendMail Fail
     }
     return res.status(200).send(`successfully handled ${hook}`);
   });
@@ -229,3 +236,68 @@ async function handleCheckoutEnd(orderId, customerEmail) {
 
   //sendBuyedItem(snapshot.data().items, customerEmail);
 }
+
+async function setSubscriptionToUser(orderId) {
+  const orderSnapshot = await db.collection("orders").doc(orderId).get();
+  let metadata = {};
+  for (const item of orderSnapshot.data().items) {
+    if (item.paymentMode === "subscription") {
+      metadata = item.metadata;
+      break;
+    }
+  }
+  //User :
+  //abonnement ON
+  //bool : engagement ?
+  //fin engagement
+  //période payer
+  //orderId[]
+  await db
+    .collection("users")
+    .doc(orderSnapshot.data().userId)
+    .set(
+      {
+        abonnement: "paid",
+        asEngagement: metadata.asEngagement,
+        finEngagement: admin.firestore.Timestamp.fromDate(
+          new Date(
+            new Date().setFullYear(
+              new Date().getFullYear(),
+              new Date().getMonth() + metadata.engagementDuree,
+              new Date().getDate()
+            )
+          )
+        ),
+        periodePaye: metadata.periodePaye,
+        subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
+        orderId: admin.firestore.FieldValue.arrayUnion(orderId),
+      },
+      { merge: true }
+    );
+}
+
+exports.createPortalSession = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    const snapshot = await db.collection("users").doc(context.auth.uid).get();
+    const configuration = await stripe.billingPortal.configurations.create({
+      features: {
+        customer_update: {
+          allowed_updates: ['email', 'tax_id'],
+          enabled: true,
+        },
+        invoice_history: {enabled: true},
+      },
+      business_profile: {
+        privacy_policy_url: 'https://example.com/privacy',
+        terms_of_service_url: 'https://example.com/terms',
+      },
+    });
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: snapshot.data().customerId,
+      return_url: 'http://localhost:3000/',
+      configuration : configuration.id,
+    });
+    return {url : session.url};
+  });

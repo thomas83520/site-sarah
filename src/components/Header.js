@@ -6,16 +6,24 @@ import { useLogout } from "../hooks/useLogout";
 import { useHistory } from "react-router-dom";
 import HeaderText from "./HeaderText";
 import { usePanierContext } from "../hooks/usePanierContext";
+import {useFonctions, useFunctions} from '../hooks/useFunctions';
 
 export default function HeaderDisplay() {
   const { user } = useAuthContext();
   const { items } = usePanierContext();
   const history = useHistory();
   const { logout, isPending } = useLogout();
+  const {createPortalSession, response} = useFunctions();
 
   const handleClick = (page) => {
     history.push(page);
   };
+
+  const handlePortal = async () => {
+    console.log("await");
+    const res = await createPortalSession();
+    window.location.href = res.url;
+  }
 
   return (
     <Box position="relative" width="auto">
@@ -62,7 +70,7 @@ export default function HeaderDisplay() {
             </Box>
             <Box mx={2}>
               <Button
-                onClick={() => handleClick("/monEspace")}
+                onClick={handlePortal}
                 variant="outlined"
                 size="small"
               >

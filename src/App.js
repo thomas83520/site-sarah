@@ -18,6 +18,8 @@ import NewAccount from "./pages/NewAccount/NewAccount";
 import Panier from "./pages/Panier/Panier";
 
 import { useAuthContext } from "./hooks/useAuthContext";
+import Cancel from "./pages/checkout/Cancel";
+import Success from "./pages/checkout/Success";
 
 function App() {
   const { user, authIsReady } = useAuthContext();
@@ -71,6 +73,12 @@ function App() {
                 </Route>
                 <Route path="/panier">
                   <Panier />
+                </Route>
+                <Route path="/success">
+                  <Success/>
+                </Route>
+                <Route path="/cancel">
+                  <Cancel/>
                 </Route>
               </>
             </Switch>
