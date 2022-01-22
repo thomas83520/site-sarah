@@ -135,6 +135,8 @@ exports.recurringPayment = functions
           cancel_at: nextyear,
         });
         setSubscriptionToUser(data.metadata.orderId);
+      }else{
+        setSubscriptionIfNecessary(data.metadata.orderId);
       }
       handleCheckoutEnd(data.metadata.orderId, data.customer_details.email);
     }
@@ -144,6 +146,7 @@ exports.recurringPayment = functions
       await db.collection("users").doc(userId).set(
         {
           abonnement: "paid",
+          subscriptionAsFailed: false,
         },
         { merge: true }
       );
@@ -165,6 +168,36 @@ exports.recurringPayment = functions
         );
       //sendMail Fail
     }
+    //Subscription updated : cancel_at_period_end
+    else if (hook === "customer.subscription.updated") {
+      const snapshot = await db
+        .collection("customers")
+        .doc(data.customer)
+        .get();
+      if (!data.cancel_at_period_end) {
+        await db
+          .collection("users")
+          .doc(snapshot.data().userId)
+          .set(
+            { abonnement: "paid", canceledDateSet: false, finAbonnement: "" },
+            { merge: true }
+          );
+      } else {
+        await db
+          .collection("users")
+          .doc(snapshot.data().userId)
+          .set(
+            {
+              abonnement: "canceled",
+              canceledDateSet: true,
+              finAbonnement: admin.firestore.Timestamp.fromDate(
+                new Date(data.current_period_end * 1000)
+              ),
+            },
+            { merge: true }
+          );
+      }
+    }
     return res.status(200).send(`successfully handled ${hook}`);
   });
 
@@ -178,6 +211,7 @@ async function sendBuyedItem(items, email) {
     if (item.nom.includes("Ebook")) {
       await bucket.file("ebook.pdf").download({ destination: tempFilePath });
       attachment = fs.readFileSync(tempFilePath).toString("base64");
+      fs.unlinkSync(tempFilePath);
       attachedDoc.push({
         content: attachment,
         filename: "ebookhiver.pdf",
@@ -189,6 +223,7 @@ async function sendBuyedItem(items, email) {
         .file("BoiteMenu/" + getWeek(new Date()) + ".pdf")
         .download({ destination: tempFilePath });
       attachment = fs.readFileSync(tempFilePath).toString("base64");
+      fs.unlinkSync(tempFilePath);
       attachedDoc.push({
         content: attachment,
         filename: "Boite à menu.pdf",
@@ -246,17 +281,13 @@ async function setSubscriptionToUser(orderId) {
       break;
     }
   }
-  //User :
-  //abonnement ON
-  //bool : engagement ?
-  //fin engagement
-  //période payer
-  //orderId[]
   await db
     .collection("users")
     .doc(orderSnapshot.data().userId)
     .set(
       {
+        abonnementIsActive: true,
+        subscriptionAsFailed: false,
         abonnement: "paid",
         asEngagement: metadata.asEngagement,
         finEngagement: admin.firestore.Timestamp.fromDate(
@@ -271,6 +302,58 @@ async function setSubscriptionToUser(orderId) {
         periodePaye: metadata.periodePaye,
         subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
         orderId: admin.firestore.FieldValue.arrayUnion(orderId),
+        subscriptionEnd: admin.firestore.Timestamp.fromDate(
+          new Date(
+            new Date().setFullYear(
+              new Date().getFullYear() + 1,
+              new Date().getMonth(),
+              new Date().getDate()
+            )
+          )
+        ),
+      },
+      { merge: true }
+    );
+}
+async function setSubscriptionIfNecessary(orderId) {
+  const orderSnapshot = await db.collection("orders").doc(orderId).get();
+  let metadata = {};
+  for (const item of orderSnapshot.data().items) {
+    if (item.nom.includes("boite à menus")) {
+      metadata = item.metadata;
+      break;
+    }
+  }
+  await db
+    .collection("users")
+    .doc(orderSnapshot.data().userId)
+    .set(
+      {
+        abonnementIsActive: true,
+        subscriptionAsFailed: false,
+        abonnement: "paid",
+        asEngagement: metadata.asEngagement,
+        finEngagement: admin.firestore.Timestamp.fromDate(
+          new Date(
+            new Date().setFullYear(
+              new Date().getFullYear(),
+              new Date().getMonth() + metadata.engagementDuree,
+              new Date().getDate()
+            )
+          )
+        ),
+        periodePaye: metadata.periodePaye,
+        subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
+        orderId: admin.firestore.FieldValue.arrayUnion(orderId),
+        subscriptionEnd: admin.firestore.Timestamp.fromDate(
+          new Date(
+            new Date().setFullYear(
+              new Date().getFullYear() + 1,
+              new Date().getMonth(),
+              new Date().getDate()
+            )
+          )
+        ),
       },
       { merge: true }
     );
@@ -283,21 +366,26 @@ exports.createPortalSession = functions
     const configuration = await stripe.billingPortal.configurations.create({
       features: {
         customer_update: {
-          allowed_updates: ['email', 'tax_id'],
+          allowed_updates: ["email", "tax_id"],
           enabled: true,
         },
-        invoice_history: {enabled: true},
+        invoice_history: { enabled: true },
+        subscription_cancel: {
+          enabled: !snapshot.data().asEngagement,
+          mode: "at_period_end",
+        },
+        payment_method_update: { enabled: true },
       },
       business_profile: {
-        privacy_policy_url: 'https://example.com/privacy',
-        terms_of_service_url: 'https://example.com/terms',
+        privacy_policy_url: "https://example.com/privacy",
+        terms_of_service_url: "https://example.com/terms",
       },
     });
 
     const session = await stripe.billingPortal.sessions.create({
       customer: snapshot.data().customerId,
-      return_url: 'http://localhost:3000/',
-      configuration : configuration.id,
+      return_url: "http://localhost:3000/",
+      configuration: configuration.id,
     });
-    return {url : session.url};
+    return { url: session.url };
   });

@@ -6,14 +6,14 @@ import { useLogout } from "../hooks/useLogout";
 import { useHistory } from "react-router-dom";
 import HeaderText from "./HeaderText";
 import { usePanierContext } from "../hooks/usePanierContext";
-import {useFonctions, useFunctions} from '../hooks/useFunctions';
+import { useFonctions, useFunctions } from "../hooks/useFunctions";
 
 export default function HeaderDisplay() {
   const { user } = useAuthContext();
   const { items } = usePanierContext();
   const history = useHistory();
   const { logout, isPending } = useLogout();
-  const {createPortalSession, response} = useFunctions();
+  const { createPortalSession, response } = useFunctions();
 
   const handleClick = (page) => {
     history.push(page);
@@ -23,7 +23,7 @@ export default function HeaderDisplay() {
     console.log("await");
     const res = await createPortalSession();
     window.location.href = res.url;
-  }
+  };
 
   return (
     <Box position="relative" width="auto">
@@ -69,13 +69,15 @@ export default function HeaderDisplay() {
               </Button>
             </Box>
             <Box mx={2}>
-              <Button
-                onClick={handlePortal}
-                variant="outlined"
-                size="small"
-              >
-                Mon espace
-              </Button>
+              {response.isPending ? (
+                <Button disabled variant="outlined" size="small">
+                  Chargement
+                </Button>
+              ) : (
+                <Button onClick={handlePortal} variant="outlined" size="small">
+                  Mon espace
+                </Button>
+              )}
             </Box>
             {isPending ? (
               <Button onClick={null} variant="outlined" size="small" disabled>
