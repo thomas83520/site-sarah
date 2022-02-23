@@ -275,9 +275,9 @@ export default function BoiteMenu() {
           justifyContent="center"
           alignItems="center"
         >
-          <Typography>Mensuel</Typography>
+          <Typography>Paiement mensuel</Typography>
           <Switch checked={checked} onChange={handleChange} />
-          <Typography>Annuel</Typography>
+          <Typography>Paiement unique</Typography>
         </Box>
       </Box>
       <Box textAlign="center">

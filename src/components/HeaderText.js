@@ -28,6 +28,7 @@ export default function HeaderText() {
         sx={{
           textAlign: "center",
           padding: "20px",
+          paddingTop:{xs:"50px",lg:"0px"}
         }}
       >
         <ThemeProvider theme={TitleFont}>

@@ -134,8 +134,8 @@ exports.recurringPayment = functions
         await stripe.subscriptions.update(data.subscription, {
           cancel_at: nextyear,
         });
-        setSubscriptionToUser(data.metadata.orderId);
-      }else{
+        setSubscriptionToUser(data.metadata.orderId, data.subscription);
+      } else {
         setSubscriptionIfNecessary(data.metadata.orderId);
       }
       handleCheckoutEnd(data.metadata.orderId, data.customer_details.email);
@@ -167,6 +167,7 @@ exports.recurringPayment = functions
           { merge: true }
         );
       //sendMail Fail
+      sendMailPaymentFail();
     }
     //Subscription updated : cancel_at_period_end
     else if (hook === "customer.subscription.updated") {
@@ -201,38 +202,8 @@ exports.recurringPayment = functions
     return res.status(200).send(`successfully handled ${hook}`);
   });
 
-async function sendBuyedItem(items, email) {
-  functions.logger.log("sendbuyeditem");
-  const bucket = admin.storage().bucket();
-  const tempFilePath = path.join(os.tmpdir(), "fileName");
-  let attachedDoc = [];
-
-  for (const item of items) {
-    if (item.nom.includes("Ebook")) {
-      await bucket.file("ebook.pdf").download({ destination: tempFilePath });
-      attachment = fs.readFileSync(tempFilePath).toString("base64");
-      fs.unlinkSync(tempFilePath);
-      attachedDoc.push({
-        content: attachment,
-        filename: "ebookhiver.pdf",
-        type: "application/pdf",
-        disposition: "attachment",
-      });
-    } else if (item.nom.includes("boite à menus")) {
-      await bucket
-        .file("BoiteMenu/" + getWeek(new Date()) + ".pdf")
-        .download({ destination: tempFilePath });
-      attachment = fs.readFileSync(tempFilePath).toString("base64");
-      fs.unlinkSync(tempFilePath);
-      attachedDoc.push({
-        content: attachment,
-        filename: "Boite à menu.pdf",
-        type: "application/pdf",
-        disposition: "attachment",
-      });
-    }
-  }
-
+//TODO : template email payment fail
+async function sendMailPaymentFail(email) {
   const msg = {
     to: email,
     from: "contact@dietup.fr", //TODO : change email
@@ -242,6 +213,30 @@ async function sendBuyedItem(items, email) {
   await sgMail.send(msg).catch((err) => {
     console.log("erreur", err);
   });
+}
+
+async function sendEbook(email) {
+  functions.logger.log("sendEbook",email);
+  const bucket = admin.storage().bucket();
+  const tempFilePath = path.join(os.tmpdir(), "fileName");
+  await bucket.file("ebook.pdf").download({ destination: tempFilePath });
+  attachment = fs.readFileSync(tempFilePath).toString("base64");
+
+  const msg = {
+    to: email,
+    from: "contact@dietup.fr", //TODO : change email
+    templateId: SEND_EBOOK_TEMPLATE_ID,
+    attachments: [{
+      content: attachment,
+      filename: "ebookhiver.pdf",
+      type: "application/pdf",
+      disposition: "attachment",
+    }],
+  };
+  await sgMail.send(msg).catch((err) => {
+    console.log("erreur", err);
+  });
+  fs.unlinkSync(tempFilePath);
 }
 
 async function sendConfirmationEmail(email) {
@@ -269,10 +264,12 @@ async function handleCheckoutEnd(orderId, customerEmail) {
 
   sendConfirmationEmail(customerEmail);
 
-  //sendBuyedItem(snapshot.data().items, customerEmail);
+  for (const item of snapshot.data().items) {
+    if (item.nom === "Ebook") sendEbook(customerEmail);
+  }
 }
 
-async function setSubscriptionToUser(orderId) {
+async function setSubscriptionToUser(orderId, subscriptionId) {
   const orderSnapshot = await db.collection("orders").doc(orderId).get();
   let metadata = {};
   for (const item of orderSnapshot.data().items) {
@@ -281,6 +278,7 @@ async function setSubscriptionToUser(orderId) {
       break;
     }
   }
+  functions.logger.log(new Date(new Date().getDate() + 30 * (metadata.engagementDuree - 1)));
   await db
     .collection("users")
     .doc(orderSnapshot.data().userId)
@@ -291,17 +289,12 @@ async function setSubscriptionToUser(orderId) {
         abonnement: "paid",
         asEngagement: metadata.asEngagement,
         finEngagement: admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date().setFullYear(
-              new Date().getFullYear(),
-              new Date().getMonth() + metadata.engagementDuree,
-              new Date().getDate()
-            )
-          )
+          new Date(new Date().getDate() + 30 * (metadata.engagementDuree - 1))
         ),
         periodePaye: metadata.periodePaye,
         subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
         orderId: admin.firestore.FieldValue.arrayUnion(orderId),
+        subscriptionId: subscriptionId,
         subscriptionEnd: admin.firestore.Timestamp.fromDate(
           new Date(
             new Date().setFullYear(
@@ -321,42 +314,36 @@ async function setSubscriptionIfNecessary(orderId) {
   for (const item of orderSnapshot.data().items) {
     if (item.nom.includes("boite à menus")) {
       metadata = item.metadata;
+      await db
+        .collection("users")
+        .doc(orderSnapshot.data().userId)
+        .set(
+          {
+            abonnementIsActive: true,
+            subscriptionAsFailed: false,
+            abonnement: "paid",
+            asEngagement: metadata.asEngagement,
+            finEngagement: admin.firestore.Timestamp.fromDate(
+              new Date(new Date().getDate() + 30 * (data.engagementDuree - 1))
+            ),
+            periodePaye: metadata.periodePaye,
+            subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
+            orderId: admin.firestore.FieldValue.arrayUnion(orderId),
+            subscriptionEnd: admin.firestore.Timestamp.fromDate(
+              new Date(
+                new Date().setFullYear(
+                  new Date().getFullYear() + 1,
+                  new Date().getMonth(),
+                  new Date().getDate()
+                )
+              )
+            ),
+          },
+          { merge: true }
+        );
       break;
     }
   }
-  await db
-    .collection("users")
-    .doc(orderSnapshot.data().userId)
-    .set(
-      {
-        abonnementIsActive: true,
-        subscriptionAsFailed: false,
-        abonnement: "paid",
-        asEngagement: metadata.asEngagement,
-        finEngagement: admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date().setFullYear(
-              new Date().getFullYear(),
-              new Date().getMonth() + metadata.engagementDuree,
-              new Date().getDate()
-            )
-          )
-        ),
-        periodePaye: metadata.periodePaye,
-        subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
-        orderId: admin.firestore.FieldValue.arrayUnion(orderId),
-        subscriptionEnd: admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date().setFullYear(
-              new Date().getFullYear() + 1,
-              new Date().getMonth(),
-              new Date().getDate()
-            )
-          )
-        ),
-      },
-      { merge: true }
-    );
 }
 
 exports.createPortalSession = functions
@@ -388,4 +375,111 @@ exports.createPortalSession = functions
       configuration: configuration.id,
     });
     return { url: session.url };
+  });
+
+//TODO : template email menusEveryWeek
+exports.sendMenusEveryWeek = functions
+  .region("europe-west1")
+  .pubsub.schedule("every Saturday 14:30")
+  .timeZone("Europe/Paris")
+  .onRun(async (context) => {
+    functions.logger.log("menus");
+    const snapshot = await db
+      .collection("users")
+      .where("abonnementIsActive", "==", true)
+      .get();
+    if (snapshot.empty) {
+      console.log("No matching documents.");
+      return;
+    }
+    let email = [];
+    snapshot.forEach((doc) => {
+      email.push(doc.data().email);
+    });
+    functions.logger.log("email", email);
+
+    const bucket = admin.storage().bucket();
+    const tempFilePath = path.join(os.tmpdir(), "fileName");
+    await bucket
+      .file("BoiteMenu/" + getWeek(new Date()) + ".pdf")
+      .download({ destination: tempFilePath });
+    attachment = fs.readFileSync(tempFilePath).toString("base64");
+    fs.unlinkSync(tempFilePath);
+
+    const msg = {
+      to: email,
+      from: "contact@dietup.fr", //TODO : change email
+      templateId: SEND_EBOOK_TEMPLATE_ID,
+      attachments: [
+        {
+          content: attachment,
+          filename: "menu_semaine_" + getWeek(new Date()) + ".pdf",
+          type: "application/pdf",
+          disposition: "attachment",
+        },
+      ],
+    };
+    await sgMail.sendMultiple(msg).catch((err) => {
+      console.log("erreur", err);
+    });
+  });
+
+//Cancel subscription not paid after 7 days
+exports.disableSubscriptionNotPayed = functions
+  .region("europe-west1")
+  .pubsub.schedule("every day 01:00")
+  .timeZone("Europe/Paris")
+  .onRun(async (context) => {
+    const snapshots = await db
+      .collection("users")
+      .where("failedDate", "array-contains", new Date(new Date().getDate() - 7))
+      .get();
+
+    snapshots.forEach(async (snapshot) => {
+      await stripe.subscriptions.del(snapshot.data().subscriptionId);
+      await db
+        .collection("users")
+        .doc(snapshot.data().userId)
+        .set({ abonnement: "end" }, { merge: true });
+    });
+  });
+
+//Cancel subscription canceled by user after period end
+exports.cancelSubscriptionAtPeriodEnd = functions
+  .region("europe-west1")
+  .pubsub.schedule("every day 02:00")
+  .timeZone("Europe/Paris")
+  .onRun(async (context) => {
+    const snapshots = await db
+      .collection("users")
+      .where("finAbonnement", "<", new Date())
+      .get();
+
+    snapshots.forEach(async (snapshot) => {
+      await stripe.subscriptions.del(snapshot.data().subscriptionId);
+      await db
+        .collection("users")
+        .doc(snapshot.data().userId)
+        .set({ abonnement: "end" }, { merge: true });
+    });
+  });
+
+//Cancel Subscription 1 year after start
+exports.cancelSubscriptionEndOfYear = functions
+  .region("europe-west1")
+  .pubsub.schedule("every day 02:00")
+  .timeZone("Europe/Paris")
+  .onRun(async (context) => {
+    const snapshots = await db
+      .collection("users")
+      .where("subscriptionEnd", "<", new Date())
+      .get();
+
+    snapshots.forEach(async (snapshot) => {
+      await stripe.subscriptions.del(snapshot.data().subscriptionId);
+      await db
+        .collection("users")
+        .doc(snapshot.data().userId)
+        .set({ abonnement: "end" }, { merge: true });
+    });
   });
