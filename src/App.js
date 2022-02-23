@@ -7,8 +7,9 @@ import HeaderDisplay from "./components/Header";
 import Footer from "./components/Footer";
 import Home from "./pages/home/Home";
 import About from "./pages/about/About";
-import Meeting from "./pages/meeting/Meeting";
+import Contact from "./pages/Contact/Contact";
 import Distance from "./pages/Distance/Distance";
+import Meeting from "./pages/Meeting/Meeting";
 import Domicile from "./pages/Domicile/Domicile";
 import Boutique from "./pages/Boutique/Boutique";
 import Ebook from "./pages/Ebook/Ebook";
@@ -60,7 +61,10 @@ function App() {
                   <Distance />
                 </Route>
                 <Route path="/meeting">
-                  <Meeting />
+                  <Meeting/>
+                </Route>
+                <Route path="/contact">
+                  <Contact />
                 </Route>
                 <Route path="/boutique">
                   <Boutique />

@@ -9,50 +9,53 @@ import {
 import { useState } from "react";
 
 import BoiteMenuImage from "../../assets/imageBoiteMenu.jpg";
+import photo1Min from "../../assets/photo1-min.png";
+import photo2Min from "../../assets/photo2-min.jpg";
+import photo3Min from "../../assets/photo3-min.png";
 import { usePanierContext } from "../../hooks/usePanierContext";
 
 const mounthPrice = {
   mensuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule sans engagement paiement mensuel",
-    interval:"month",
-    interval_count:"1",
+    interval: "month",
+    interval_count: "1",
     textPrix: "10€/mois",
     prix: 10,
-    paymentMode:"subscription",
-    metadata:{
-      'asEngagement' : false,
-      'engagementDuree' : null,
-      'periodePaye' : 1
-    }
+    paymentMode: "subscription",
+    metadata: {
+      asEngagement: false,
+      engagementDuree: null,
+      periodePaye: 1,
+    },
   },
   biAnnuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule engagement 6 mois paiement mensuel",
     textPrix: "9€/mois",
-    interval:"month",
-    interval_count:"1",
+    interval: "month",
+    interval_count: "1",
     prix: 9,
-    paymentMode:"subscription",
-    metadata:{
-      'asEngagement' : true,
-      'engagementDuree' : 6,
-      'periodePaye':1
-    }
+    paymentMode: "subscription",
+    metadata: {
+      asEngagement: true,
+      engagementDuree: 6,
+      periodePaye: 1,
+    },
   },
   annuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule engagement 12 mois paiement mensuel",
     textPrix: "8€/mois",
-    interval:"month",
-    interval_count:"1",
+    interval: "month",
+    interval_count: "1",
     prix: 8,
-    paymentMode:"subscription",
-    metadata:{
-      'asEngagement' : true,
-      'engagementDuree' : 12,
-      'periodePaye':1
-    }
+    paymentMode: "subscription",
+    metadata: {
+      asEngagement: true,
+      engagementDuree: 12,
+      periodePaye: 1,
+    },
   },
 };
 const yearlyPrice = {
@@ -61,39 +64,39 @@ const yearlyPrice = {
     infoText: "formule mensuel",
     textPrix: "Non compatible",
     prix: 0,
-    paymentMode:"payment",
-    metadata:{
-      'asEngagement' : false,
-      'engagementDuree' : null,
+    paymentMode: "payment",
+    metadata: {
+      asEngagement: false,
+      engagementDuree: null,
 
-      'periodePaye': 0,
-    }
+      periodePaye: 0,
+    },
   },
   biAnnuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule engagement 6 mois paiement unique",
     textPrix: "50€",
-    interval:"month",
-    interval_count:"6",
+    interval: "month",
+    interval_count: "6",
     prix: 50,
-    paymentMode:"subscription",
-    metadata:{
-      'asEngagement' : true,
-      'engagementDuree' : 6,
-      'periodePaye': 6,
-    }
+    paymentMode: "subscription",
+    metadata: {
+      asEngagement: true,
+      engagementDuree: 6,
+      periodePaye: 6,
+    },
   },
   annuel: {
     nom: "La boite à menus de Sarah",
     infoText: "formule engagement 12 mois paiement unique",
     textPrix: "90€",
     prix: 90,
-    paymentMode:"payment",
-    metadata:{
-      'asEngagement' : false,
-      'engagementDuree' : null,
-      'periodePaye': 12,
-    }
+    paymentMode: "payment",
+    metadata: {
+      asEngagement: false,
+      engagementDuree: null,
+      periodePaye: 12,
+    },
   },
 };
 
@@ -115,10 +118,7 @@ export default function BoiteMenu() {
     else {
       dispatch({
         type: "ADD_ITEM",
-        payload: [
-          ...items,
-          item,
-        ],
+        payload: [...items, item],
       });
       setAdded(true);
     }
@@ -211,9 +211,11 @@ export default function BoiteMenu() {
                   textAlign="center"
                 >
                   <Box
+                    component="img"
                     height={100}
                     width={100}
                     borderRadius="10px"
+                    src={photo1Min}
                     sx={{ backgroundColor: "lightcoral" }}
                   />
                   <Typography>Tu choisis ta formule d'abonnement</Typography>
@@ -228,9 +230,11 @@ export default function BoiteMenu() {
                   textAlign="center"
                 >
                   <Box
+                    component="img"
                     height={100}
                     width={100}
                     borderRadius="10px"
+                    src={photo2Min}
                     sx={{ backgroundColor: "lightcoral" }}
                   />
                   <Typography>
@@ -247,9 +251,11 @@ export default function BoiteMenu() {
                   textAlign="center"
                 >
                   <Box
+                    component="img"
                     height={100}
                     width={100}
                     borderRadius="10px"
+                    src={photo3Min}
                     sx={{ backgroundColor: "lightcoral" }}
                   />
                   <Typography>
