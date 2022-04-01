@@ -45,12 +45,12 @@ function App() {
                 <Route exact path="/">
                   <Home />
                 </Route>
-                <Route path="/login">
+                {/*<Route path="/login">
                   {user ? <Redirect to="/" /> : <Login />}
                 </Route>
                 <Route path="/nouveauCompte">
                   {user ? <Redirect to="/" /> : <NewAccount />}
-                </Route>
+      </Route>*/}
                 <Route path="/about">
                   <About />
                 </Route>
@@ -68,7 +68,7 @@ function App() {
                 </Route>
                 {/*<Route path="/boutique">
                   <Boutique />
-      </Route>*/}
+                </Route>
                 <Route path="/la_boite_a_menu">
                   <BoiteMenu />
                 </Route>
@@ -83,7 +83,7 @@ function App() {
                 </Route>
                 <Route path="/cancel">
                   <Cancel />
-                </Route>
+                </Route>*/}
               </>
             </Switch>
 
