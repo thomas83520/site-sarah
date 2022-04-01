@@ -61,14 +61,14 @@ function App() {
                   <Distance />
                 </Route>
                 <Route path="/meeting">
-                  <Meeting/>
+                  <Meeting />
                 </Route>
                 <Route path="/contact">
                   <Contact />
                 </Route>
-                <Route path="/boutique">
+                {/*<Route path="/boutique">
                   <Boutique />
-                </Route>
+      </Route>*/}
                 <Route path="/la_boite_a_menu">
                   <BoiteMenu />
                 </Route>
@@ -79,10 +79,10 @@ function App() {
                   <Panier />
                 </Route>
                 <Route path="/success">
-                  <Success/>
+                  <Success />
                 </Route>
                 <Route path="/cancel">
-                  <Cancel/>
+                  <Cancel />
                 </Route>
               </>
             </Switch>

@@ -49,7 +49,7 @@ export default function About() {
                   variant="outlined"
                   color="info"
                 >
-                  Contacter moi ici
+                  Prenez rendez-vous ici
                 </Button>
               </Box>
             </Grid>

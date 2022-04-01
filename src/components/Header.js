@@ -30,7 +30,7 @@ export default function HeaderDisplay() {
       <HeaderText />
       <Box
         position="absolute"
-        display="flex"
+        display="none" //flex
         justifyContent="center"
         alignItems="center"
         sx={{

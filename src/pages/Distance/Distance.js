@@ -18,12 +18,12 @@ export default function Distance() {
               <Typography textAlign="justify" py={3}>
                 Pour débuter un suivi diététique à distance, il suffit de
                 m'envoyer un mail ou de remplir la rubrique "prendre
-                rendez-vous". Vous pouvez également me retrouver sur Doctolib
+                rendez-vous". Vous pouvez également prendre rendez-vous depuis mon site
                 pour choisir un créneau en fonction de vos disponibilité:
               </Typography>
               <Box width="100%" textAlign={{xs:"start",md:"center"}} fontSize={{xs:"small",md:"medium"}}>
-                <Link href="https://www.doctolib.fr/dieteticien/marseille/sarah-roggi" target="_blank" underline="hover">
-                  https://www.doctolib.fr/dieteticien/marseille/sarah-roggi
+                <Link href="/meeting" underline="hover">
+                  Prendre rendez-vous
                 </Link>
               </Box>
               <Typography py={3}>
