@@ -24,15 +24,15 @@ export default function Panier() {
     if (!user) history.push("/login");
     let paymentMode = "payment";
     let payment_intent_data = {};
-    let subscription_data = {}
+    let subscription_data = {};
     let line_items = items.map((item) => {
       if (item.paymentMode === "subscription") {
         paymentMode = "subscription";
         subscription_data.metadata = {
-          asEngagement : item.metadata.asEngagement,
-          dureeEngagement : item.metadata.engagementDuree,
-          periodePaye : item.metadata.periodePaye,
-        }
+          asEngagement: item.metadata.asEngagement,
+          dureeEngagement: item.metadata.engagementDuree,
+          periodePaye: item.metadata.periodePaye,
+        };
         return {
           quantity: 1,
           price_data: {
@@ -49,7 +49,6 @@ export default function Panier() {
           },
         };
       } else {
-        
         return {
           quantity: 1,
           price_data: {
@@ -113,7 +112,6 @@ export default function Panier() {
                 size="large"
                 disabled
               >
-                {" "}
                 Chargement..
               </Button>
             ) : (
