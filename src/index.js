@@ -13,11 +13,10 @@ import { PanierContextProvider } from "./context/PanierContext";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
+const stripe_id = process.env.REACT_APP_STRIPE_API_KEY_PROD;
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
-const stripePromise = loadStripe(
-  "pk_test_51KIza7BMhfHQVXqd32lhcVUQdwOR2ttJK2AB6qUKiwGWDNVkw3H34kxNZdjyODyjSmXNJII8hq0TUWpZwHny87tz00ij5XSvHq"
-);
+const stripePromise = loadStripe(stripe_id);
 
 let theme = createTheme({
   palette: {

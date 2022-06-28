@@ -20,7 +20,6 @@ export const useDocument = (collection, id) => {
         setError('No such document exists')
       }
     }, err => {
-      console.log(err.message)
       setError('failed to get document')
     })
 

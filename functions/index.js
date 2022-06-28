@@ -9,9 +9,16 @@ const db = admin.firestore();
 //Send grid init
 const sgMail = require("@sendgrid/mail");
 const API_KEY = functions.config().sendgrid.key;
-const TEMPLATE_ID = functions.config().sendgrid.template;
-const SEND_EBOOK_TEMPLATE_ID =
-  functions.config().sendgrid.send_ebook_template_id;
+const CONTACT_FORM_TEMPLATE_ID = functions.config().sendgrid.contact;
+const SEND_MENU_HEBDO_TEMPLATE_ID = functions.config().sendgrid.send_menu_hebdo;
+const RECU_PAIEMENT_TEMPLATE_ID = functions.config().sendgrid.recu_paiement;
+const REACTIVE_ABO_TEMPLATE_ID = functions.config().sendgrid.reactive_abo;
+const ECHEC_PAIEMENT_ABO_TEMPLATE_ID =
+  functions.config().sendgrid.echec_paiement_abonnement;
+const FICHIER_COMMAND_TEMPLATE_ID = functions.config().sendgrid.fichier_command;
+const CANCEL_ABO_PERIOD_END = functions.config().sendgrid.cancel_abo_end_period;
+const DEFINITIV_ABO_CANCEL_TEMPLATE_ID =
+  functions.config().sendgrid.definitive_abo_cancel;
 sgMail.setApiKey(API_KEY);
 
 const path = require("path");
@@ -19,7 +26,7 @@ const os = require("os");
 const fs = require("fs");
 
 //Stripe init
-const stripe = require("stripe")(functions.config().stripe.secret_key);
+const stripe = require("stripe")(functions.config().stripe.secret_key_prod);
 
 exports.sendContactMail = functions
   .region("europe-west1")
@@ -27,7 +34,7 @@ exports.sendContactMail = functions
     const msg = {
       to: "sarahroggi.dieteticienne@gmail.com",
       from: "contact@dietup.fr",
-      templateId: TEMPLATE_ID,
+      templateId: CONTACT_FORM_TEMPLATE_ID,
       dynamic_template_data: {
         completeName: data.completeName,
         nom: data.nom,
@@ -44,25 +51,6 @@ exports.sendContactMail = functions
     return { succes: true };
   });
 
-exports.createStripeCheckout = functions
-  .region("europe-west1")
-  .https.onCall(async (data, context) => {
-    const snapshot = await db.collection("users").doc(context.auth.uid).get();
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: data.paymentMode,
-      customer: snapshot.data().customerId,
-      success_url: "http://localhost:3000/success",
-      cancel_url: "http://localhost:3000/cancel",
-      line_items: data.line_items,
-      metadata: data.metadata,
-    });
-
-    return {
-      id: session.id,
-    };
-  });
-
 exports.createOrder = functions
   .region("europe-west1")
   .https.onCall(async (data, context) => {
@@ -72,34 +60,75 @@ exports.createOrder = functions
     return docRef.id;
   });
 
-exports.createStripeCustomers = functions
+//Create stripe customer and add in firestore
+exports.createStripeCustomer = functions
   .region("europe-west1")
-  .auth.user()
-  .onCreate(async (user) => {
-    return stripe.customers
-      .create({ email: user.email })
-      .then(async (customer) => {
-        await db
-          .collection("users")
-          .doc(user.uid)
-          .set(
-            { userId: user.uid, email: user.email, customerId: customer.id },
-            { merge: true }
-          );
-        await db
-          .collection("customers")
-          .doc(customer.id)
-          .set({ userId: user.uid, customerId: customer.id }, { merge: true });
+  .https.onCall(async (data, context) => {
+    /*const testClock = await stripe.testHelpers.testClocks.create({
+      frozen_time: Math.round(new Date().getTime() / 1000),
+      name: "Test clock",
+    });*/
+    const stripeCustomer = await stripe.customers.create({
+      email: data.email,
+      name: data.displayName,
+    });
+
+    await db
+      .collection("customer")
+      .doc(stripeCustomer.id)
+      .set({ customerId: stripeCustomer.id, userId: data.userId });
+    await db.collection("clients").doc(data.userId).set({
+      achats: [],
+      email: data.email,
+      name: data.displayName,
+      customerId: stripeCustomer.id,
+      userId: data.userId,
+    });
+
+    return true;
+  });
+
+//Renvoie client itent to front
+exports.createPaymentIntent = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    if (data.paymentType === "payment") {
+      //TODO : créer payment intent et return client secret
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: data.totalPrice * 100,
+        currency: "eur",
+        payment_method_types: ["card"],
+        customer: data.user.customerId,
+        metadata: data.productIds,
       });
+      return { error: false, clientSecret: paymentIntent.client_secret };
+    } else if (data.paymentType === "subscription") {
+      const subscription = await stripe.subscriptions.create({
+        customer: data.user.customerId,
+        items: data.subscriptionItems,
+        add_invoice_items: data.paymentItems,
+        metadata: data.productIds,
+        payment_behavior: "default_incomplete",
+        expand: ["latest_invoice.payment_intent"],
+      });
+      //TODO : créer abonnement et return client secret
+      return {
+        error: false,
+        clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+      };
+    } else {
+      return { error: true, errorMessage: "Type de paiement inconnue" };
+    }
   });
 
 //Handle webhook from stripe
 exports.recurringPayment = functions
   .region("europe-west1")
   .https.onRequest(async (req, res) => {
+    const type = req.body.type;
+
     const sig = req.headers["stripe-signature"];
     const endpointSecret = functions.config().stripe.webhooktest;
-    const hook = req.body.type;
     const data = req.body.data.object;
 
     let event;
@@ -111,375 +140,505 @@ exports.recurringPayment = functions
 
     if (!data) throw new Error("missing data");
 
-    //Get user ID from customer id
-    const snapshot = await db.collection("customers").doc(data.customer).get();
-    const userId = snapshot.data().userId;
-
-    //Checkout end and paid
-    if (
-      hook === "checkout.session.completed" &&
-      data.payment_status === "paid"
-    ) {
-      await db.collection("checkout").add({ data: data });
-      if (data.mode === "subscription") {
-        const nextyear = Math.floor(
-          new Date(
-            new Date().setFullYear(
-              new Date().getFullYear() + 1,
-              new Date().getMonth(),
-              new Date().getDate() - 1
-            )
-          ).getTime() / 1000
+    switch (type) {
+      case "invoice.payment_succeeded":
+        if (data.amount_due === 0) {
+          return res.status(200).send(`successfully handled`);
+        }
+        var customerDoc= await db
+          .collection("customer")
+          .doc(data.customer)
+          .get();
+        const subscriptionId = data.subscription;
+        const payment_intent_id = data.payment_intent;
+        const payment_intent = await stripe.paymentIntents.retrieve(
+          payment_intent_id
         );
-        await stripe.subscriptions.update(data.subscription, {
-          cancel_at: nextyear,
+
+        await stripe.subscriptions.update(subscriptionId, {
+          default_payment_method: payment_intent.payment_method,
         });
-        setSubscriptionToUser(data.metadata.orderId, data.subscription);
-      } else {
-        setSubscriptionIfNecessary(data.metadata.orderId);
-      }
-      handleCheckoutEnd(data.metadata.orderId, data.customer_details.email);
+
+        if (data.billing_reason === "subscription_create") {
+          //If billing_reason is created : handle commande
+          await handleFirstCommand(
+            data.lines.data,
+            true,
+            customerDoc,
+            data.subscription
+          );
+        }
+        //if billing_reason is cycle, rien faire;
+        break;
+
+      case "invoice.payment_failed":
+        const result = await db
+          .collection("boutiqueItems")
+          .doc(data.lines.data[0].plan.product)
+          .get();
+        var customerDoc = await db
+          .collection("customer")
+          .doc(data.customer)
+          .get();
+
+        var userDoc = await db
+          .collection("clients")
+          .doc(customerDoc.data().userId)
+          .get();
+
+        await sendMail(
+          userDoc.data().email,
+          ECHEC_PAIEMENT_ABO_TEMPLATE_ID,
+          [],
+          {
+            montant: data.amount,
+            datePaiement: new Date(data.created * 1000).toLocaleDateString(
+              "fr"
+            ),
+            url: data.hosted_invoice_url,
+            abonnementName: result.data().productName,
+          }
+        );
+        break;
+
+      case "payment_intent.succeeded":
+        var customerDoc = await db
+          .collection("customer")
+          .doc(data.customer)
+          .get();
+        await stripe.customers.update(data.customer, {
+          invoice_settings: { default_payment_method: data.payment_method },
+        });
+        var userDoc = await db
+          .collection("clients")
+          .doc(customerDoc.data().userId)
+          .get();
+        await sendMail(userDoc.data().email, RECU_PAIEMENT_TEMPLATE_ID, [], {
+          montant: data.amount / 100,
+          datePaiement: new Date(data.created * 1000).toLocaleDateString("fr"),
+          url : data.charges.data[0].receipt_url,
+        });
+        const receiptUrl = data.charges.data[0].receipt_url;
+        if (!data.invoice) {
+          await handleFirstCommand(data.metadata, false, customerDoc, null);
+        }
+        functions.logger.log("payment intent succeeded");
+        break;
+
+      case "customer.subscription.updated":
+        functions.logger.log("updated");
+        const previousData = req.body.data.previous_attributes;
+        var customerDoc = await db
+          .collection("customer")
+          .doc(data.customer)
+          .get();
+        if (previousData.hasOwnProperty("status")) {
+          const productDoc = await db
+            .collection("boutiqueItems")
+            .doc(data.plan.product)
+            .get();
+
+          await changeSubscriptionStatus(productDoc, customerDoc, data.status);
+        }
+        if (previousData.hasOwnProperty("current_period_end")) {
+          //check if interval_count > duree restante ? setDureeMaxAbonnement sur client : cancelAtPeriodEnd
+          await checkNeedCancelPeriodEnd(data, true);
+        }
+        if (previousData.hasOwnProperty("cancel_at_period_end")) {
+          await handleCancelAtPeriodEnd(data);
+        }
+        break;
+
+      case "customer.subscription.created":
+        //check if interval_count > duree max ? setDureeMaxAbonnement sur client : cancelAtPeriodEnd
+        functions.logger.log("created");
+        await checkNeedCancelPeriodEnd(data, false);
+        break;
+
+      case "customer.subscription.deleted":
+        var customerDoc = await db
+          .collection("customer")
+          .doc(data.customer)
+          .get();
+        const productDoc = await db
+          .collection("boutiqueItems")
+          .doc(data.plan.product)
+          .get();
+        var userDoc = await db
+          .collection("clients")
+          .doc(customerDoc.data().userId)
+          .get();
+
+        await changeSubscriptionStatus(productDoc, customerDoc, data.status);
+        await sendMail(
+          userDoc.data().email,
+          DEFINITIV_ABO_CANCEL_TEMPLATE_ID,
+          [],
+          { abonnementName: productDoc.data().productName }
+        );
+        break;
     }
-    // subscription payment paied
-    else if (hook === "invoice.payment_succeeded") {
-      //Set abonnement to "paid" -> in case it was fail
-      await db.collection("users").doc(userId).set(
-        {
-          abonnement: "paid",
-          subscriptionAsFailed: false,
-        },
-        { merge: true }
+
+    return res.status(200).send(`successfully handled`);
+  });
+
+handleCancelAtPeriodEnd = async (data) => {
+  const result = await db
+    .collection("boutiqueItems")
+    .doc(data.plan.product)
+    .get();
+  const customerDoc = await db.collection("customer").doc(data.customer).get();
+
+  const userDoc = await db.collection("clients").doc(customerDoc.data().userId).get();
+  //Send mail changement status
+  if (data.cancel_at_period_end)
+    await sendMail(userDoc.data().email, CANCEL_ABO_PERIOD_END, [], {
+      abonnementName: result.data().productName,
+      dateFin: new Date(data.cancel_at * 1000).toLocaleDateString("fr"),
+    });
+  else
+    await sendMail(userDoc.data().email, REACTIVE_ABO_TEMPLATE_ID, [], {
+      abonnementName: result.data().productName,
+    });
+};
+
+checkNeedCancelPeriodEnd = async (data, asStarted) => {
+  const productId = data.plan.product;
+  const prodDoc = await db.collection("boutiqueItems").doc(productId).get();
+  var dureePeriod = 0;
+  var dureeMax = 0;
+  var nomFormule = "Mensuel";
+  var isCancel = false;
+  const customerDoc = await db.collection("customer").doc(data.customer).get();
+  const userAboDoc = await db
+    .collection("clients")
+    .doc(customerDoc.data().userId)
+    .collection("achats")
+    .doc(productId)
+    .get();
+  if (prodDoc.data().asDureeMax) {
+    if (asStarted) {
+      dureeMax = userAboDoc.data()["dureeRestante"];
+      isCancel = userAboDoc.data().isCancel;
+    } else {
+      dureeMax = prodDoc.data().dureeMax;
+    }
+    if (data.plan.interval === "year") {
+      dureePeriod = data.plan.interval_count * 12;
+      nomFormule = "Annuel";
+    } else {
+      dureePeriod = data.plan.interval_count;
+      if (data.plan.interval_count === 6) nomFormule = "Formule 6 mois";
+    }
+    functions.logger.log("duree", dureeMax, "period", dureePeriod);
+    const dureeRestante = dureeMax - dureePeriod;
+    if (dureeRestante > 0) {
+      setIfsubscriptionCancelable(
+        customerDoc.data().userId,
+        productId,
+        true,
+        dureeRestante,
+        data.current_period_end,
+        nomFormule,
+        isCancel
+      );
+    } else {
+      await stripe.subscriptions.update(data.id, {
+        cancel_at_period_end: true,
+      });
+      //empeche réactivation depuis espace client
+      setIfsubscriptionCancelable(
+        customerDoc.data().userId,
+        productId,
+        false,
+        dureeRestante,
+        data.current_period_end,
+        nomFormule,
+        isCancel
       );
     }
-    //Subscription payment failed
-    else if (hook === "invoice.payment_failed") {
-      //set abonnement to
-      await db
-        .collection("users")
-        .doc(userId)
-        .set(
-          {
-            abonnement: "failed",
-            failedDate: admin.firestore.FieldValue.arrayUnion(
-              admin.firestore.Timestamp.fromDate(new Date())
-            ),
-          },
-          { merge: true }
-        );
-      //sendMail Fail
-      sendMailPaymentFail();
-    }
-    //Subscription updated : cancel_at_period_end
-    else if (hook === "customer.subscription.updated") {
-      const snapshot = await db
-        .collection("customers")
-        .doc(data.customer)
-        .get();
-      if (!data.cancel_at_period_end) {
-        await db
-          .collection("users")
-          .doc(snapshot.data().userId)
-          .set(
-            { abonnement: "paid", canceledDateSet: false, finAbonnement: "" },
-            { merge: true }
-          );
-      } else {
-        await db
-          .collection("users")
-          .doc(snapshot.data().userId)
-          .set(
-            {
-              abonnement: "canceled",
-              canceledDateSet: true,
-              finAbonnement: admin.firestore.Timestamp.fromDate(
-                new Date(data.current_period_end * 1000)
-              ),
-            },
-            { merge: true }
-          );
-      }
-    }
-    return res.status(200).send(`successfully handled ${hook}`);
-  });
+  } else return;
+};
 
-//TODO : template email payment fail
-async function sendMailPaymentFail(email) {
-  const msg = {
-    to: email,
-    from: "contact@dietup.fr", //TODO : change email
-    templateId: SEND_EBOOK_TEMPLATE_ID,
-    attachments: attachedDoc,
-  };
-  await sgMail.send(msg).catch((err) => {
-    console.log("erreur", err);
-  });
-}
+setIfsubscriptionCancelable = async (
+  userId,
+  productId,
+  value,
+  dureeRestante,
+  stripeTimeStamp,
+  nomFormule,
+  isCancel
+) => {
+  var usersUpdate = {};
+  usersUpdate["canCancel"] = value;
+  usersUpdate["dureeRestante"] = dureeRestante;
+  usersUpdate["nextPeriod"] = new Date(stripeTimeStamp * 1000);
+  usersUpdate["nomFormule"] = nomFormule;
+  usersUpdate["isCancel"] = isCancel;
+  await db
+    .collection("clients")
+    .doc(userId)
+    .collection("achats")
+    .doc(productId)
+    .set(usersUpdate, { merge: true });
+};
 
-async function sendEbook(email) {
-  functions.logger.log("sendEbook",email);
+handleFirstCommand = async (
+  metadata,
+  isInvoice,
+  customerDoc,
+  subscriptionId
+) => {
+  var attachedDoc = [];
   const bucket = admin.storage().bucket();
   const tempFilePath = path.join(os.tmpdir(), "fileName");
-  await bucket.file("ebook.pdf").download({ destination: tempFilePath });
-  attachment = fs.readFileSync(tempFilePath).toString("base64");
+  for (const item in metadata) {
+    const productId = isInvoice ? metadata[item].price.product : metadata[item];
+    //Ajoute produit aux achats du clients
+    await db
+      .collection("clients")
+      .doc(customerDoc.data().userId)
+      .update({
+        achats: admin.firestore.FieldValue.arrayUnion(productId),
+      });
+    const productDoc = await db
+      .collection("boutiqueItems")
+      .doc(productId)
+      .get();
+    if (productDoc.data().asAbonnement) {
+      await db
+        .collection("clients")
+        .doc(customerDoc.data().userId)
+        .collection("achats")
+        .doc(productId)
+        .set(
+          { name: productDoc.data().productName, subscriptionId },
+          { merge: true }
+        );
+    } else {
+      await db
+        .collection("clients")
+        .doc(customerDoc.data().userId)
+        .collection("achats")
+        .doc("oneTimePurchase")
+        .set({ itemCount: admin.firestore.FieldValue.increment(1) });
+      await db
+        .collection("clients")
+        .doc(customerDoc.data().userId)
+        .collection("achats")
+        .doc("oneTimePurchase")
+        .collection("docs")
+        .add({
+          productId,
+          productUrl: productDoc.data().url,
+          name: productDoc.data().productName,
+          imageCouverture: productDoc.data().imageCouverture,
+        });
+    }
 
-  const msg = {
-    to: email,
-    from: "contact@dietup.fr", //TODO : change email
-    templateId: SEND_EBOOK_TEMPLATE_ID,
-    attachments: [{
+    //Download doc à envoyer
+    const itemDoc = await db.collection("boutiqueItems").doc(productId).get();
+    await bucket
+      .file(itemDoc.data().path)
+      .download({ destination: tempFilePath });
+    attachment = fs.readFileSync(tempFilePath).toString("base64");
+    attachedDoc.push({
       content: attachment,
-      filename: "ebookhiver.pdf",
+      filename: itemDoc.data().name,
       type: "application/pdf",
       disposition: "attachment",
-    }],
-  };
-  await sgMail.send(msg).catch((err) => {
-    console.log("erreur", err);
-  });
-  fs.unlinkSync(tempFilePath);
-}
+    });
+    fs.unlinkSync(tempFilePath);
+  }
 
-async function sendConfirmationEmail(email) {
-  functions.logger.log("sendconfirmationEmail");
-  const msg = {
-    to: email,
-    from: "contact@dietup.fr", //TODO : change email
-    templateId: SEND_EBOOK_TEMPLATE_ID,
-  };
-  sgMail.send(msg).catch((err) => {
-    console.log("erreur", err);
-  });
-}
+  const userDoc = await db.collection("clients").doc(customerDoc.data().userId).get();
+  await sendMail(
+    userDoc.data().email,
+    FICHIER_COMMAND_TEMPLATE_ID,
+    attachedDoc,
+    {}
+  );
+};
+
+changeSubscriptionStatus = async (productDoc, customerDoc, status) => {
+  const line = productDoc.data().abonnementField;
+  var usersUpdate = {};
+  usersUpdate[`status`] = status;
+  await db
+    .collection("clients")
+    .doc(customerDoc.data().userId)
+    .collection("achats")
+    .doc(productDoc.id)
+    .set(usersUpdate, { merge: true });
+  var statusUpdate = {};
+  statusUpdate[`${line}`] = status;
+  await db
+    .collection("clients")
+    .doc(customerDoc.data().userId)
+    .update(statusUpdate);
+};
 
 function getWeek(dateTime) {
   var oneJan = new Date(dateTime.getFullYear(), 0, 1);
   var numberOfDays = Math.floor((dateTime - oneJan) / (24 * 60 * 60 * 1000));
   var result = Math.ceil((dateTime.getDay() + 1 + numberOfDays) / 7);
-  return result;
+  return result == 53 ? 1 : result;
 }
 
-async function handleCheckoutEnd(orderId, customerEmail) {
-  const snapshot = await db.collection("orders").doc(orderId).get();
-  const userId = snapshot.data().userId;
-
-  sendConfirmationEmail(customerEmail);
-
-  for (const item of snapshot.data().items) {
-    if (item.nom === "Ebook") sendEbook(customerEmail);
-  }
-}
-
-async function setSubscriptionToUser(orderId, subscriptionId) {
-  const orderSnapshot = await db.collection("orders").doc(orderId).get();
-  let metadata = {};
-  for (const item of orderSnapshot.data().items) {
-    if (item.paymentMode === "subscription") {
-      metadata = item.metadata;
-      break;
-    }
-  }
-  functions.logger.log(new Date(new Date().getDate() + 30 * (metadata.engagementDuree - 1)));
-  await db
-    .collection("users")
-    .doc(orderSnapshot.data().userId)
-    .set(
-      {
-        abonnementIsActive: true,
-        subscriptionAsFailed: false,
-        abonnement: "paid",
-        asEngagement: metadata.asEngagement,
-        finEngagement: admin.firestore.Timestamp.fromDate(
-          new Date(new Date().getDate() + 30 * (metadata.engagementDuree - 1))
-        ),
-        periodePaye: metadata.periodePaye,
-        subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
-        orderId: admin.firestore.FieldValue.arrayUnion(orderId),
-        subscriptionId: subscriptionId,
-        subscriptionEnd: admin.firestore.Timestamp.fromDate(
-          new Date(
-            new Date().setFullYear(
-              new Date().getFullYear() + 1,
-              new Date().getMonth(),
-              new Date().getDate()
-            )
-          )
-        ),
-      },
-      { merge: true }
-    );
-}
-async function setSubscriptionIfNecessary(orderId) {
-  const orderSnapshot = await db.collection("orders").doc(orderId).get();
-  let metadata = {};
-  for (const item of orderSnapshot.data().items) {
-    if (item.nom.includes("boite à menus")) {
-      metadata = item.metadata;
-      await db
-        .collection("users")
-        .doc(orderSnapshot.data().userId)
-        .set(
-          {
-            abonnementIsActive: true,
-            subscriptionAsFailed: false,
-            abonnement: "paid",
-            asEngagement: metadata.asEngagement,
-            finEngagement: admin.firestore.Timestamp.fromDate(
-              new Date(new Date().getDate() + 30 * (data.engagementDuree - 1))
-            ),
-            periodePaye: metadata.periodePaye,
-            subscriptionStart: admin.firestore.Timestamp.fromDate(new Date()),
-            orderId: admin.firestore.FieldValue.arrayUnion(orderId),
-            subscriptionEnd: admin.firestore.Timestamp.fromDate(
-              new Date(
-                new Date().setFullYear(
-                  new Date().getFullYear() + 1,
-                  new Date().getMonth(),
-                  new Date().getDate()
-                )
-              )
-            ),
-          },
-          { merge: true }
-        );
-      break;
-    }
-  }
-}
-
-exports.createPortalSession = functions
-  .region("europe-west1")
-  .https.onCall(async (data, context) => {
-    const snapshot = await db.collection("users").doc(context.auth.uid).get();
-    const configuration = await stripe.billingPortal.configurations.create({
-      features: {
-        customer_update: {
-          allowed_updates: ["email", "tax_id"],
-          enabled: true,
-        },
-        invoice_history: { enabled: true },
-        subscription_cancel: {
-          enabled: !snapshot.data().asEngagement,
-          mode: "at_period_end",
-        },
-        payment_method_update: { enabled: true },
-      },
-      business_profile: {
-        privacy_policy_url: "https://example.com/privacy",
-        terms_of_service_url: "https://example.com/terms",
-      },
-    });
-
-    const session = await stripe.billingPortal.sessions.create({
-      customer: snapshot.data().customerId,
-      return_url: "http://localhost:3000/",
-      configuration: configuration.id,
-    });
-    return { url: session.url };
+sendMail = async (email, templateId, attachedDoc, data) => {
+  const msg = {
+    to: email,
+    from: { email: "sarahroggi.dieteticienne@gmail.com", name: "Sarah Roggi - diététicienne" },
+    templateId,
+    dynamic_template_data: data,
+    attachments: attachedDoc,
+  };
+  await sgMail.send(msg).catch((err) => {
+    functions.logger.log("erreur", err);
   });
+};
 
 //TODO : template email menusEveryWeek
 exports.sendMenusEveryWeek = functions
   .region("europe-west1")
-  .pubsub.schedule("every Saturday 14:30")
+  .pubsub.schedule("every Thursday 17:30")
   .timeZone("Europe/Paris")
   .onRun(async (context) => {
-    functions.logger.log("menus");
     const snapshot = await db
-      .collection("users")
-      .where("abonnementIsActive", "==", true)
+      .collection("clients")
+      .where("boiteMenuSubscription", "==", "active")
       .get();
     if (snapshot.empty) {
-      console.log("No matching documents.");
       return;
     }
+    const productId = "prod_LqpWqFkjPrvRA8";
+    const productDoc = await db
+      .collection("boutiqueItems")
+      .doc(productId)
+      .get();
     let email = [];
-    snapshot.forEach((doc) => {
-      email.push(doc.data().email);
-    });
-    functions.logger.log("email", email);
-
     const bucket = admin.storage().bucket();
     const tempFilePath = path.join(os.tmpdir(), "fileName");
-    await bucket
-      .file("BoiteMenu/" + getWeek(new Date()) + ".pdf")
-      .download({ destination: tempFilePath });
+    const bucketFileName = "BoiteMenu/" + getWeek(new Date()) + ".pdf";
+    const fileName = "menu_semaine_" + getWeek(new Date()) + ".pdf";
+    const file = bucket.file(bucketFileName);
+    for (let doc of snapshot.docs) {
+      await db
+        .collection("clients")
+        .doc(doc.id)
+        .collection("achats")
+        .doc(productId)
+        .collection("docs")
+        .add({
+          fileName,
+          bucketFileName,
+          imageCouverture: productDoc.data().imageCouverture,
+        });
+      email.push(doc.data().email);
+    }
+    functions.logger.log("email", email);
+    await file.download({ destination: tempFilePath });
     attachment = fs.readFileSync(tempFilePath).toString("base64");
     fs.unlinkSync(tempFilePath);
 
     const msg = {
       to: email,
-      from: "contact@dietup.fr", //TODO : change email
-      templateId: SEND_EBOOK_TEMPLATE_ID,
+      from: { email: "contact@dietup.fr", name: "Sarah Roggi - diététicienne" }, //TODO : change email
+      templateId: SEND_MENU_HEBDO_TEMPLATE_ID,
       attachments: [
         {
           content: attachment,
-          filename: "menu_semaine_" + getWeek(new Date()) + ".pdf",
+          filename: fileName,
           type: "application/pdf",
           disposition: "attachment",
         },
       ],
     };
-    await sgMail.sendMultiple(msg).catch((err) => {
-      console.log("erreur", err);
+    await sgMail.sendMultiple(msg).catch((err) => {});
+  });
+
+exports.getFactures = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    const receipt = [];
+    const paymentIntents = await stripe.paymentIntents.list({
+      customer: data.customerId,
+    });
+    paymentIntents.data.forEach((intent) => {
+      if (intent.status === "succeeded")
+        receipt.push({
+          receipt_url: intent.charges.data[0].receipt_url,
+          amount: intent.amount,
+          created: intent.created,
+          id: intent.id,
+          description: intent.charges.data[0].description,
+          paid: intent.charges.data[0].paid,
+        });
+    });
+    return receipt;
+  });
+
+exports.switchAbonnementCancelStatus = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    try {
+      await stripe.subscriptions.update(data.subscriptionId, {
+        cancel_at_period_end: data.value,
+      });
+      const productId = data.productId;
+      const value = data.value;
+
+      await db
+        .collection("clients")
+        .doc(data.userId)
+        .collection("achats")
+        .doc(productId)
+        .update({ isCancel: value });
+      return { success: true };
+    } catch (e) {
+      return { success: false };
+    }
+  });
+
+exports.getPaymentsMethods = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    return await stripe.customers.listPaymentMethods(data.customerId, {
+      type: "card",
     });
   });
 
-//Cancel subscription not paid after 7 days
-exports.disableSubscriptionNotPayed = functions
+exports.getFingerprint = functions
   .region("europe-west1")
-  .pubsub.schedule("every day 01:00")
-  .timeZone("Europe/Paris")
-  .onRun(async (context) => {
-    const snapshots = await db
-      .collection("users")
-      .where("failedDate", "array-contains", new Date(new Date().getDate() - 7))
-      .get();
-
-    snapshots.forEach(async (snapshot) => {
-      await stripe.subscriptions.del(snapshot.data().subscriptionId);
-      await db
-        .collection("users")
-        .doc(snapshot.data().userId)
-        .set({ abonnement: "end" }, { merge: true });
-    });
+  .https.onCall(async (data, context) => {
+    return await stripe.paymentMethods.retrieve(data.paymentMethod);
   });
 
-//Cancel subscription canceled by user after period end
-exports.cancelSubscriptionAtPeriodEnd = functions
+exports.getCustomerPaymentMethod = functions
   .region("europe-west1")
-  .pubsub.schedule("every day 02:00")
-  .timeZone("Europe/Paris")
-  .onRun(async (context) => {
-    const snapshots = await db
-      .collection("users")
-      .where("finAbonnement", "<", new Date())
-      .get();
-
-    snapshots.forEach(async (snapshot) => {
-      await stripe.subscriptions.del(snapshot.data().subscriptionId);
-      await db
-        .collection("users")
-        .doc(snapshot.data().userId)
-        .set({ abonnement: "end" }, { merge: true });
-    });
+  .https.onCall(async (data, context) => {
+    const customer = await stripe.customers.retrieve(data.customerId);
+    try {
+      const result = await stripe.paymentMethods.retrieve(
+        customer.invoice_settings.default_payment_method
+      );
+      return result;
+    } catch (e) {
+      return { error: true };
+    }
   });
 
-//Cancel Subscription 1 year after start
-exports.cancelSubscriptionEndOfYear = functions
+exports.attachNewCard = functions
   .region("europe-west1")
-  .pubsub.schedule("every day 02:00")
-  .timeZone("Europe/Paris")
-  .onRun(async (context) => {
-    const snapshots = await db
-      .collection("users")
-      .where("subscriptionEnd", "<", new Date())
-      .get();
-
-    snapshots.forEach(async (snapshot) => {
-      await stripe.subscriptions.del(snapshot.data().subscriptionId);
-      await db
-        .collection("users")
-        .doc(snapshot.data().userId)
-        .set({ abonnement: "end" }, { merge: true });
-    });
+  .https.onCall(async (data, context) => {
+    try {
+      await stripe.paymentMethods.attach(data.payment_method, {
+        customer: data.customer,
+      });
+      await stripe.customers.update(data.customer, {
+        invoice_settings: { default_payment_method: data.payment_method },
+      });
+    } catch (e) {
+      return { error: true };
+    }
   });

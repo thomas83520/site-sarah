@@ -1,5 +1,5 @@
 import { createContext, useEffect, useReducer } from "react";
-import { projectAuth } from "../firebase/config";
+import { projectAuth, projectFirestore } from "../firebase/config";
 
 export const AuthContext = createContext();
 
@@ -26,14 +26,30 @@ export const AuthContextProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    const unsub = projectAuth.onAuthStateChanged((user) => {
-      dispatch({ type: "AUTH_IS_READY", payload: user });
+    const unsub = projectAuth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const userDoc = await projectFirestore
+          .collection("clients")
+          .doc(user.uid)
+          .get();
+        dispatch({ type: "AUTH_IS_READY", payload: userDoc.data() });
+      } else dispatch({ type: "AUTH_IS_READY", payload: user });
       unsub();
     });
   }, []);
 
+  const reloadData = async () => {
+    if (state.user) {
+      const userDoc = await projectFirestore
+        .collection("clients")
+        .doc(state.user.uid)
+        .get();
+      dispatch({ type: "AUTH_IS_READY", payload: userDoc.data() });
+    } else dispatch({ type: "AUTH_IS_READY", payload: state.user });
+  }
+
   return (
-    <AuthContext.Provider value={{ ...state, dispatch }}>
+    <AuthContext.Provider value={{ ...state, dispatch,reloadData }}>
       {children}
     </AuthContext.Provider>
   );

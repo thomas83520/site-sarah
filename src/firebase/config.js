@@ -18,6 +18,7 @@ const firebaseConfig = {
 
   const projectFunctions= firebase.app().functions('europe-west1');
   const projectAuth = firebase.auth();
+  projectAuth.languageCode = 'fr';
   const projectStorage = firebase.storage();
   const projectFirestore = firebase.firestore();
 

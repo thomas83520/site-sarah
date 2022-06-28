@@ -19,18 +19,12 @@ export default function HeaderDisplay() {
     history.push(page);
   };
 
-  const handlePortal = async () => {
-    console.log("await");
-    const res = await createPortalSession();
-    window.location.href = res.url;
-  };
-
   return (
     <Box position="relative" width="auto">
       <HeaderText />
       <Box
         position="absolute"
-        display="none" //flex
+        display="flex" 
         justifyContent="center"
         alignItems="center"
         sx={{
@@ -74,7 +68,7 @@ export default function HeaderDisplay() {
                   Chargement
                 </Button>
               ) : (
-                <Button onClick={handlePortal} variant="outlined" size="small">
+                <Button onClick={() => handleClick("/moncompte")} variant="outlined" size="small">
                   Mon espace
                 </Button>
               )}

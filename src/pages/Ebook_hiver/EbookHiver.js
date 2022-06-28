@@ -8,7 +8,7 @@ export default function Ebook() {
   const { items, dispatch } = usePanierContext();
   const [added, setAdded] = useState(false);
   const handleClick = () => {
-    const exist = items.find((element) => element.nom === "Ebook");
+    const exist = items.find((element) => element.productId === "prod_KzLut2yTPxBcIy");
     if (exist) setAdded(true);
     else {
       dispatch({
@@ -20,8 +20,10 @@ export default function Ebook() {
             infoText: "On mange quoi demain? version hiver",
             textPrix: "12€",
             prix: 12,
+            productId: "prod_KzLut2yTPxBcIy",
             paymentType: "payment",
-            metadata: {'productName' : 'Ebookhiver'}
+            metadata: { productName: "Ebookhiver" },
+            priceId: "price_1KJNCMBMhfHQVXqdbncBqRcB",
           },
         ],
       });
@@ -60,9 +62,6 @@ export default function Ebook() {
             display="flex"
           >
             <Box>
-              <Typography>Description</Typography>
-            </Box>
-            <Box>
               <Typography
                 pt={3}
                 fontSize={48}
@@ -79,6 +78,35 @@ export default function Ebook() {
           </Box>
         </Grid>
       </Grid>
+      <Container maxWidth="md">
+        <Box textAlign="center" pb={10} pt={2}>
+          <Typography pb={3} variant="h4" sx={{ textDecoration: "underline" }}>
+            Description:
+          </Typography>
+          <Typography>
+            {" "}
+            Je vous présente mon tout premier Ebook de recettes d'hiver saines
+            et gourmandes ! <br />
+            <br />
+            Vous découvrirez à l'intérieur 20 recettes inédites: <br />
+            - 5 recettes de petits déjeuners <br />
+            - 5 recettes de déjeuners rapides sur le pouce <br />
+            - 5 recettes de plats chauds et douillets <br />
+            - 5 recettes de desserts / collations saines et gourmandes
+            <br /> <br />
+            Tout au long de l'Ebook, vous trouverez des fiches nutrition
+            associées aux recettes. Plusieurs thèmes sont abordés: l'intérêt de
+            mettre des légumes dans ses gâteaux, varier ses produits céréaliers,
+            comparaison entre des céréales du petit déjeuner industrielles et
+            faites maison ... <br />
+            <br />
+            N'hésitez pas à prendre en photo vos réalisations et à me les
+            envoyer !<br />
+            <br />
+            Je vous souhaite une bonne dégustation !
+          </Typography>
+        </Box>
+      </Container>
     </Container>
   );
 }

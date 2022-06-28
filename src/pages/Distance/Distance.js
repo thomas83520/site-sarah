@@ -1,5 +1,6 @@
-import { Container, Grid, Typography, Link } from "@mui/material";
+import { Container, Grid, Typography, Button } from "@mui/material";
 import { Box } from "@mui/system";
+import { Link } from "react-router-dom";
 import Banner from "../../components/Banner";
 import SuiviWithoutSubtitle from "./SuiviWithoutSubtitle";
 import SuiviWithSubtitle from "./SuiviWithSubtitle";
@@ -18,13 +19,24 @@ export default function Distance() {
               <Typography textAlign="justify" py={3}>
                 Pour débuter un suivi diététique à distance, il suffit de
                 m'envoyer un mail ou de remplir la rubrique "prendre
-                rendez-vous". Vous pouvez également prendre rendez-vous depuis mon site
-                pour choisir un créneau en fonction de vos disponibilité:
+                rendez-vous". Vous pouvez également prendre rendez-vous depuis
+                mon site pour choisir un créneau en fonction de vos
+                disponibilité:
               </Typography>
-              <Box width="100%" textAlign={{xs:"start",md:"center"}} fontSize={{xs:"small",md:"medium"}}>
-                <Link href="/meeting" underline="hover">
+              <Box
+                width="100%"
+                textAlign={{ xs: "start", md: "center" }}
+                fontSize={{ xs: "small", md: "medium" }}
+              >
+                <Button
+                  component={Link}
+                  underline="hover"
+                  to="/meeting"
+                  variant="text"
+                  color="primary"
+                >
                   Prendre rendez-vous
-                </Link>
+                </Button>
               </Box>
               <Typography py={3}>
                 Le déroulé sera le même que pour une consultation à domicile,
@@ -91,8 +103,10 @@ export default function Distance() {
             </Typography>
           </Grid>
         </Grid>
-        <Container maxWidth="md" sx={{marginBottom:'20px'}}>
-          <Typography fontWeight="bold" variant="h6">Paiement : </Typography>
+        <Container maxWidth="md" sx={{ marginBottom: "20px" }}>
+          <Typography fontWeight="bold" variant="h6">
+            Paiement :{" "}
+          </Typography>
           <Typography fontWeight="bold">
             Il sera à effectuer au plus tard le jour même de la consultation par
             virement bancaire ou via Paypal. Un document explicatif vous sera

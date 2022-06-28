@@ -88,13 +88,15 @@ export default function NewAccount() {
 
     let displayName = nom + " " + prenom;
 
-    signup(email, password, displayName);
+    const signupOK = await signup(email, password, displayName);
 
-    setEmail("");
-    setPassword("");
-    setConfirmPassword("");
-    setNom("");
-    setPrenom("");
+    if (signupOK) {
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setNom("");
+      setPrenom("");
+    }
   };
 
   const handleLogin = () => {
@@ -106,11 +108,6 @@ export default function NewAccount() {
       <HeaderText />
 
       <Container component="main" maxWidth="sm">
-        {error ? (
-          <Box>
-            <Typography>Une erreur est survenue</Typography>
-          </Box>
-        ) : null}
         <Box
           display="block"
           justifyContent="center"
@@ -226,6 +223,13 @@ export default function NewAccount() {
                 Créer son compte
               </Button>
             )}
+            {error ? (
+              <Box>
+                <Typography color="error">
+                  Une erreur est survenue : {error}
+                </Typography>
+              </Box>
+            ) : null}
             <Box
               display="flex"
               textAlign="center"
@@ -235,6 +239,7 @@ export default function NewAccount() {
               py={3}
             >
               <Typography px={3}>Vous avez déjà compte ?</Typography>
+
               <Button onClick={handleLogin}>Se connecter</Button>
             </Box>
           </Box>

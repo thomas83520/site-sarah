@@ -55,7 +55,6 @@ export const useFunctions = () => {
       const response = await functions(functionData);
       dispatchIfNotCancelled({ type: "SUCCESS", payload: response });
     } catch (e) {
-      console.log("error", e);
       dispatchIfNotCancelled({ type: "ERROR", payload: e });
     }
   };
@@ -65,10 +64,8 @@ export const useFunctions = () => {
     try {
       var functions = projectFunctions.httpsCallable(functionName);
       const response = await functions(functionData);
-      console.log(response);
       dispatchIfNotCancelled({ type: "SUCCESS", payload: response });
     } catch (e) {
-      console.log("error", e);
       dispatchIfNotCancelled({ type: "ERROR", payload: e });
     }
   };
@@ -80,21 +77,31 @@ export const useFunctions = () => {
       const response = await functions({ items: items });
       return response.data;
     } catch (e) {
-      console.log(e);
       return;
     }
   };
 
   const createPortalSession = async () => {
-    console.log("function");
     dispatch({ type: "IS_PENDING" });
     try {
       var functions = projectFunctions.httpsCallable("createPortalSession");
       const response = await functions();
       return response.data;
     } catch (e) {
-      console.log(e);
       return;
+    }
+  };
+
+  const callfunction = async (functionName, functionData) => {
+    dispatch({ type: "IS_PENDING" });
+    try {
+      var functions = projectFunctions.httpsCallable(functionName);
+      const response = await functions(functionData);
+      dispatchIfNotCancelled({ type: "SUCCESS", payload: response.data });
+      return response.data;
+    } catch (e) {
+      dispatchIfNotCancelled({ type: "ERROR", payload: e });
+      return {error : true, message : "Erreur lors du paiement"}
     }
   };
   //clean up functions
@@ -103,6 +110,7 @@ export const useFunctions = () => {
   }, []);
 
   return {
+    callfunction,
     sendMail,
     createStripeCheckout,
     createOrder,

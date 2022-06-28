@@ -6,7 +6,7 @@ export const useLogin = () => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
-  const { dispatch } = useAuthContext();
+  const { dispatch, reloadData } = useAuthContext();
 
   const login = async (email, password) => {
     setError(null);
@@ -20,9 +20,13 @@ export const useLogin = () => {
       );
 
       //update login to true
-      
+
       //dispatch logout action
-      dispatch({ type: "LOGIN", payload: response.user });
+      const userDoc = await projectFirestore
+        .collection("clients")
+        .doc(response.user.uid)
+        .get();
+      dispatch({ type: "LOGIN", payload: userDoc.data() });
 
       //update state
       if (!isCancelled) {
@@ -31,7 +35,6 @@ export const useLogin = () => {
       }
     } catch (e) {
       if (!isCancelled) {
-        console.log(e.message);
         setError(e.message);
         setIsPending(false);
       }
