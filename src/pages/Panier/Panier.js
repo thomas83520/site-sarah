@@ -115,7 +115,7 @@ export default function Panier() {
             <PanierItem key={item.nom} item={item} />
           ))}
           <Box
-            mx={5}
+            mx="auto"
             justifyContent="space-between"
             textAlign="center"
             alignItems="center"

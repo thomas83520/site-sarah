@@ -30,8 +30,8 @@ const price = {
     textPrix: "10€/mois",
     prix: 10,
     paymentType: "subscription",
-    productId: "prod_LqpWqFkjPrvRA8",
-    priceId: "price_1L97rIBMhfHQVXqd6FYW05Fe",
+    productId: "prod_LxWDDyE08dAZ7A",
+    priceId: "price_1LFbB9BMhfHQVXqd5F4FvTqv",
     metadata: {
       asEngagement: false,
       engagementDuree: null,
@@ -47,8 +47,8 @@ const price = {
     interval_count: "6",
     prix: 50,
     paymentType: "subscription",
-    productId: "prod_LqpWqFkjPrvRA8",
-    priceId: "price_1L97rIBMhfHQVXqdsnPZrkeY",
+    productId: "prod_LxWDDyE08dAZ7A",
+    priceId: "price_1LFbB9BMhfHQVXqdTyqLun2g",
     metadata: {
       asEngagement: true,
       engagementDuree: 6,
@@ -64,8 +64,8 @@ const price = {
     interval_count: "12",
     prix: 90,
     paymentType: "subscription",
-    productId: "prod_LqpWqFkjPrvRA8",
-    priceId: "price_1L97rIBMhfHQVXqdlmxGQZhY",
+    productId: "prod_LxWDDyE08dAZ7A",
+    priceId: "price_1LFbB9BMhfHQVXqdmAsBDRHP",
     metadata: {
       asEngagement: true,
       engagementDuree: 12,
@@ -101,6 +101,7 @@ export default function BoiteMenu() {
           </Typography>
           <Box
             component="img"
+            maxWidth="100%"
             height={500}
             alt="Boite à menu image"
             src={BoiteMenuImage}
@@ -338,7 +339,7 @@ export default function BoiteMenu() {
         {added && <Typography>Ajouté au panier</Typography>}
       </Box>
       <Grid container spacing={2} pt={3} pb={10}>
-        <Grid item xs={4}>
+        <Grid item xs={12} md={4}>
           <Box
             sx={{ backgroundColor: "#DAC3C2" }}
             p={5}
@@ -385,7 +386,7 @@ export default function BoiteMenu() {
             </Box>
           </Box>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={12} md={4}>
           <Box
             sx={{ backgroundColor: "#F8F0E0" }}
             p={5}
@@ -431,7 +432,7 @@ export default function BoiteMenu() {
             </Box>
           </Box>
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={12} md={4}>
           <Box
             sx={{ backgroundColor: "#E3E3E3" }}
             p={5}

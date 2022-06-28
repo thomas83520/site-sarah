@@ -30,10 +30,10 @@ export default function Ebook() {
             infoText: "On mange quoi demain? version hiver",
             textPrix: "12€",
             prix: 12,
-            productId: "prod_KzLut2yTPxBcIy",
+            productId: "prod_LxWDca5ywEElV6",
             paymentType: "payment",
             metadata: { productName: "Ebookhiver" },
-            priceId: "price_1KJNCMBMhfHQVXqdbncBqRcB",
+            priceId: "price_1LFbBGBMhfHQVXqd557n0hns",
           },
         ],
       });
