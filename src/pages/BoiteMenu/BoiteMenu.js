@@ -483,7 +483,6 @@ export default function BoiteMenu() {
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         open={added}
         onClose={handleClose}
-        message="I love snacks"
         key="Snackbar"
         autoHideDuration={3000}
       >

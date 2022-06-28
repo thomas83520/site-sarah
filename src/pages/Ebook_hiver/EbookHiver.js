@@ -1,4 +1,12 @@
-import { Container, Grid, Box, Typography, Button } from "@mui/material";
+import {
+  Container,
+  Grid,
+  Box,
+  Typography,
+  Button,
+  Snackbar,
+  Alert,
+} from "@mui/material";
 
 import ebook from "../../assets/imageEbook.jpg";
 import { usePanierContext } from "../../hooks/usePanierContext";
@@ -8,7 +16,9 @@ export default function Ebook() {
   const { items, dispatch } = usePanierContext();
   const [added, setAdded] = useState(false);
   const handleClick = () => {
-    const exist = items.find((element) => element.productId === "prod_KzLut2yTPxBcIy");
+    const exist = items.find(
+      (element) => element.productId === "prod_KzLut2yTPxBcIy"
+    );
     if (exist) setAdded(true);
     else {
       dispatch({
@@ -30,6 +40,8 @@ export default function Ebook() {
       setAdded(true);
     }
   };
+
+  const handleClose = () => setAdded(false);
   return (
     <Container maxWidth="lg">
       <Typography pt={5} variant="h2" textAlign="center">
@@ -107,6 +119,22 @@ export default function Ebook() {
           </Typography>
         </Box>
       </Container>
+      <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        open={added}
+        onClose={handleClose}
+        key="Snackbar"
+        autoHideDuration={3000}
+      >
+        <Alert
+          onClose={handleClose}
+          severity="success"
+          sx={{ width: "100%" }}
+          variant="filled"
+        >
+          Ajouté au panier
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
