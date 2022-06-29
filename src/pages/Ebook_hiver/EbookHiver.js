@@ -52,6 +52,7 @@ export default function Ebook() {
           <Box
             component="img"
             height={500}
+            maxWidth="100%"
             alt="Couverture ebook"
             src={ebook}
             sx={{ verticalAlign: "middle" }}

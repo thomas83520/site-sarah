@@ -12,10 +12,16 @@ export default function BoutiqueItem({ image, title, prix, path }) {
 
   return (
     <Box py={10}>
-      <Box>
+      <Box
+        onClick={handleClick}
+        sx={{
+          "&:hover": {
+            cursor: "pointer",
+          },
+        }}
+      >
         <Box position="relative">
           <Box
-            onClick={handleClick}
             component="img"
             height={380}
             alt="Image objet en vente"

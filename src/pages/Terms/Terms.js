@@ -13,17 +13,17 @@ export default function Terms() {
       <Box>
         <Box py={2}>
           <Typography fontSize={20} variant="button">
-            Arnoux Thomas
+            ROGGI Sarah
           </Typography>
         </Box>
         <Typography color={grey[700]} variant="body1">
-          Adresse : 67 rue Saint Pierre, 13005 Marseille
+          Adresse : 44 chemin des chaûmes, 83170 Brignoles
         </Typography>
         <Typography color={grey[700]} variant="body1">
-          Email : contact@dietup.fr
+          Email : sarahroggi.dieteticienne@gmail.com
         </Typography>
         <Typography color={grey[700]} variant="body1">
-          N° SIREN : 823056783
+          N° SIREN : 880377643
         </Typography>
         <Typography color={grey[700]} variant="body1">
           Hébergement : Firebase

@@ -17,7 +17,7 @@ export default function Success() {
             Vous recevrez d'ici peu votre reçu ainsi qu'un mail confirmant votre commande.
         </Typography>
         <Typography>
-            Le(s) produit(s) que vous avez acheté vous seront également envoyé(s) par mail, il est possible qu'il(s) vous soi(en)t délivré dans plusieurs minutes. 
+            Le(s) produit(s) que vous avez acheté vous seront également envoyé(s) par mail, il est possible qu'il(s) vous soi(en)t délivré(s) dans plusieurs minutes. 
         </Typography>
         <Box py={3} px={20} display="flex" textAlign="center" alignItems="center" justifyContent="space-around">
           <Button onClick={()=> handleClick("/")}>Retour à l'accueil</Button>
