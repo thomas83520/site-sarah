@@ -191,7 +191,7 @@ exports.recurringPayment = functions
           ECHEC_PAIEMENT_ABO_TEMPLATE_ID,
           [],
           {
-            montant: data.amount,
+            montant: data.amount_due/100,
             datePaiement: new Date(data.created * 1000).toLocaleDateString(
               "fr"
             ),
@@ -509,9 +509,10 @@ exports.sendMenusEveryWeek = functions
       .where("boiteMenuSubscription", "==", "active")
       .get();
     if (snapshot.empty) {
+      functions.logger.log("empty");
       return;
     }
-    const productId = "prod_LqpWqFkjPrvRA8";
+    const productId = "prod_LxWDDyE08dAZ7A";
     const productDoc = await db
       .collection("boutiqueItems")
       .doc(productId)
@@ -543,7 +544,7 @@ exports.sendMenusEveryWeek = functions
 
     const msg = {
       to: email,
-      from: { email: "contact@dietup.fr", name: "Sarah Roggi - diététicienne" }, //TODO : change email
+      from: { email: "sarahroggi.dieteticienne@gmail.com", name: "Sarah Roggi - diététicienne" }, //TODO : change email
       templateId: SEND_MENU_HEBDO_TEMPLATE_ID,
       attachments: [
         {
