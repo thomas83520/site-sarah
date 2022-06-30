@@ -5,6 +5,7 @@ admin.initializeApp();
 
 //Firestore init
 const db = admin.firestore();
+const auth = admin.auth();
 
 //Send grid init
 const sgMail = require("@sendgrid/mail");
@@ -145,7 +146,7 @@ exports.recurringPayment = functions
         if (data.amount_due === 0) {
           return res.status(200).send(`successfully handled`);
         }
-        var customerDoc= await db
+        var customerDoc = await db
           .collection("customer")
           .doc(data.customer)
           .get();
@@ -216,7 +217,7 @@ exports.recurringPayment = functions
         await sendMail(userDoc.data().email, RECU_PAIEMENT_TEMPLATE_ID, [], {
           montant: data.amount / 100,
           datePaiement: new Date(data.created * 1000).toLocaleDateString("fr"),
-          url : data.charges.data[0].receipt_url,
+          url: data.charges.data[0].receipt_url,
         });
         const receiptUrl = data.charges.data[0].receipt_url;
         if (!data.invoice) {
@@ -289,7 +290,10 @@ handleCancelAtPeriodEnd = async (data) => {
     .get();
   const customerDoc = await db.collection("customer").doc(data.customer).get();
 
-  const userDoc = await db.collection("clients").doc(customerDoc.data().userId).get();
+  const userDoc = await db
+    .collection("clients")
+    .doc(customerDoc.data().userId)
+    .get();
   //Send mail changement status
   if (data.cancel_at_period_end)
     await sendMail(userDoc.data().email, CANCEL_ABO_PERIOD_END, [], {
@@ -451,7 +455,10 @@ handleFirstCommand = async (
     fs.unlinkSync(tempFilePath);
   }
 
-  const userDoc = await db.collection("clients").doc(customerDoc.data().userId).get();
+  const userDoc = await db
+    .collection("clients")
+    .doc(customerDoc.data().userId)
+    .get();
   await sendMail(
     userDoc.data().email,
     FICHIER_COMMAND_TEMPLATE_ID,
@@ -488,7 +495,10 @@ function getWeek(dateTime) {
 sendMail = async (email, templateId, attachedDoc, data) => {
   const msg = {
     to: email,
-    from: { email: "sarahroggi.dieteticienne@gmail.com", name: "Sarah Roggi - diététicienne" },
+    from: {
+      email: "sarahroggi.dieteticienne@gmail.com",
+      name: "Sarah Roggi - diététicienne",
+    },
     templateId,
     dynamic_template_data: data,
     attachments: attachedDoc,
@@ -544,7 +554,10 @@ exports.sendMenusEveryWeek = functions
 
     const msg = {
       to: email,
-      from: { email: "sarahroggi.dieteticienne@gmail.com", name: "Sarah Roggi - diététicienne" }, //TODO : change email
+      from: {
+        email: "sarahroggi.dieteticienne@gmail.com",
+        name: "Sarah Roggi - diététicienne",
+      }, //TODO : change email
       templateId: SEND_MENU_HEBDO_TEMPLATE_ID,
       attachments: [
         {
@@ -641,5 +654,21 @@ exports.attachNewCard = functions
       });
     } catch (e) {
       return { error: true };
+    }
+  });
+
+exports.updateMail = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    try {
+      await auth.updateUser(data.userId, { email: data.email });
+      await db
+        .collection("clients")
+        .doc(data.userId)
+        .update({ email: data.email });
+      await stripe.customers.update(data.customerId, { email: data.email });
+      return { success: true };
+    } catch (e) {
+      return { success: false, message: e };
     }
   });

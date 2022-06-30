@@ -42,47 +42,6 @@ export default function Panier() {
   };
 
   const handleCheckout = async () => {
-<<<<<<< HEAD
-    if (!user) history.push("/login");
-    let paymentMode = "payment";
-    let payment_intent_data = {};
-    let subscription_data = {};
-    let line_items = items.map((item) => {
-      if (item.paymentMode === "subscription") {
-        paymentMode = "subscription";
-        subscription_data.metadata = {
-          asEngagement: item.metadata.asEngagement,
-          dureeEngagement: item.metadata.engagementDuree,
-          periodePaye: item.metadata.periodePaye,
-        };
-        return {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: item.prix * 100,
-            product_data: {
-              name: item.nom,
-              description: item.infoText,
-            },
-            recurring: {
-              interval: item.interval,
-              interval_count: item.interval_count,
-            },
-          },
-        };
-      } else {
-        return {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: item.prix * 100,
-            product_data: {
-              name: item.nom,
-              description: item.infoText,
-            },
-          },
-        };
-=======
     setLoading(true);
     setErrorCheckbox(false);
     if (!checked) {
@@ -116,7 +75,6 @@ export default function Panier() {
         cycle = item.interval_count;
         paymentType = "subscription";
         subscriptionItems.push({ price: item.priceId });
->>>>>>> boutique
       }
       priceIds.push(item.priceId);
       productIds.push(item.productId);
