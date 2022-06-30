@@ -11,6 +11,8 @@ export const panierReducer = (state, action) => {
     case "DELETE_ITEM":
       return { ...state, items: action.payload };
 
+      case "CLEAN_PANIER":
+        return {...state, items:[]};
     default:
       return state;
   }

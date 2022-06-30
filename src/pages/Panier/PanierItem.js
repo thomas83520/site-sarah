@@ -14,7 +14,8 @@ export default function PanierItem({ item }) {
 
   return (
     <Box
-      m={5}
+      mx="auto"
+      my={5}
       display="flex"
       justifyContent="space-between"
       textAlign="center"

@@ -19,7 +19,7 @@ export default function Boutique() {
               title="EBOOK RECETTES HIVER"
               image={image1}
               prix="12€"
-              path="/ebook"
+              path="/ebook_hiver"
             />
           </Grid>
           <Grid item xs={12} md={6}>

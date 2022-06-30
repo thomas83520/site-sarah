@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
-import { projectAuth, projectStorage,projectFirestore } from "../firebase/config";
+import {
+  projectAuth,
+  projectStorage,
+  projectFirestore,
+} from "../firebase/config";
 import { useAuthContext } from "./useAuthContext";
+import {useFunctions} from './useFunctions';
 
 export const useSignup = () => {
   const [isCancelled, setIsCancelled] = useState(false);
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
-  const { dispatch } = useAuthContext();
+  const { dispatch,reloadData } = useAuthContext();
+  const { callfunction, response } = useFunctions();
 
   const signup = async (email, password, displayName) => {
     setError(null);
@@ -17,7 +23,6 @@ export const useSignup = () => {
         email,
         password
       );
-      console.log(response.user);
 
       if (!response) {
         throw new Error("Could not complete signup");
@@ -26,19 +31,31 @@ export const useSignup = () => {
       //Add display name to user
       await response.user.updateProfile({ displayName });
 
-      //Dispatch login action
-      dispatch({ type: "LOGIN", payload: response.user });
-
+      //TODO : Create stripe customer
+      const stripeUser = await callfunction("createStripeCustomer",{email,displayName,userId : response.user.uid});
+      //Dispatch login actionconst userDoc = await projectFirestore
+      const userDoc =  await projectFirestore.collection("clients")
+        .doc(response.user.uid)
+        .get();
+      dispatch({ type: "LOGIN", payload: userDoc.data() });
       if (!isCancelled) {
         setIsPending(false);
         setError(null);
       }
+      return true;
     } catch (e) {
       if (!isCancelled) {
-        console.log(e.message);
-        setError(e.message);
-        setIsPending(false);
+        if (e.code === "auth/email-already-in-use") {
+          setError("L'adresse mail est déjà utilisée.");
+          setIsPending(false);
+        }else if(e.code ==="auth/invalid-email"){
+          setError("Votre email n'est pas valide.")
+        }else{
+          setError("Merci de réessayer ultérieurement");
+          setIsPending(false);
+        }
       }
+      return false;
     }
   };
 

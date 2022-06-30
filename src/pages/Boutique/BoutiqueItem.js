@@ -3,7 +3,7 @@ import { useHistory } from "react-router-dom";
 import { usePanierContext } from "../../hooks/usePanierContext";
 
 export default function BoutiqueItem({ image, title, prix, path }) {
-  const {items,dispatch } = usePanierContext();
+  const { items, dispatch } = usePanierContext();
   const history = useHistory();
 
   const handleClick = () => {
@@ -12,15 +12,26 @@ export default function BoutiqueItem({ image, title, prix, path }) {
 
   return (
     <Box py={10}>
-      <Box >
+      <Box
+        onClick={handleClick}
+        sx={{
+          "&:hover": {
+            cursor: "pointer",
+          },
+        }}
+      >
         <Box position="relative">
           <Box
-            onClick={handleClick}
             component="img"
             height={380}
             alt="Image objet en vente"
             src={image}
-            sx={{ verticalAlign: "middle" }}
+            sx={{
+              verticalAlign: "middle",
+              "&:hover": {
+                cursor: "pointer",
+              },
+            }}
           />
           <Box
             position="absolute"

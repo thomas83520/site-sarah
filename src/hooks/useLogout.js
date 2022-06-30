@@ -30,7 +30,6 @@ export const useLogout = () => {
       }
     } catch (e) {
       if (!isCancelled) {
-        console.log(e.message);
         setError(e.message);
         setIsPending(false);
       }
