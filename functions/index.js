@@ -191,7 +191,7 @@ exports.recurringPayment = functions
           ECHEC_PAIEMENT_ABO_TEMPLATE_ID,
           [],
           {
-            montant: data.amount_due/100,
+            montant: data.amount_due / 100,
             datePaiement: new Date(data.created * 1000).toLocaleDateString(
               "fr"
             ),

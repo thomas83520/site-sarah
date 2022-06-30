@@ -42,13 +42,13 @@ const price = {
     nom: "La boite à menus de Sarah",
     infoText:
       "formule sans engagement, paiement tous les 6 mois (durée : 1an )",
-    textPrix: "50€ tout les 6 mois",
+    textPrix: "50€ tous les 6 mois",
     interval: "month",
     interval_count: "6",
     prix: 50,
     paymentType: "subscription",
     productId: "prod_LxWDDyE08dAZ7A",
-    priceId: "price_1LFbB9BMhfHQVXqdTyqLun2g",
+    priceId: "price_1LFbB9BMhfHQVXqdmAsBDRHP",
     metadata: {
       asEngagement: true,
       engagementDuree: 6,
@@ -65,7 +65,7 @@ const price = {
     prix: 90,
     paymentType: "subscription",
     productId: "prod_LxWDDyE08dAZ7A",
-    priceId: "price_1LFbB9BMhfHQVXqdmAsBDRHP",
+    priceId: "price_1LFbB9BMhfHQVXqdTyqLun2g",
     metadata: {
       asEngagement: true,
       engagementDuree: 12,
