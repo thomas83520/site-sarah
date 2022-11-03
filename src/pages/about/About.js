@@ -5,17 +5,17 @@ import Banner from "../../components/Banner";
 import BoxImage from "../../components/BoxImage";
 
 //Image
-import PhotoNB from '../../assets/PHOTO_NB.jpg'
+import PhotoNB from "../../assets/PHOTO_NB.jpg";
 
 export default function About() {
   return (
     <Box>
-      <Banner title="À propos"/>
+      <Banner title="À propos" />
       <Container maxWidth="lg">
         <Box>
           <AboutDisplay>
             <Grid item xs={4}>
-              <BoxImage src={PhotoNB} alt='Image profil noir et blanc' />
+              <BoxImage src={PhotoNB} alt="Image profil noir et blanc" />
             </Grid>
             <Grid item xs={8}>
               <Box p={2} sx={{ backgroundColor: "#F0F0F0" }}>
@@ -40,7 +40,7 @@ export default function About() {
                   connaissances dans plusieurs secteurs de la nutrition.
                 </Typography>
 
-                <Typography mb={3}>
+                {/* <Typography mb={3}>
                   Vous souhaitez bénéficier d'une prise en charge ?
                 </Typography>
                 <Button
@@ -50,7 +50,7 @@ export default function About() {
                   color="info"
                 >
                   Prenez rendez-vous ici
-                </Button>
+                  </Button>*/}
               </Box>
             </Grid>
           </AboutDisplay>

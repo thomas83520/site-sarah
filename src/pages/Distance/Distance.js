@@ -10,6 +10,12 @@ export default function Distance() {
     <Box>
       <Banner title={"Suivi à distance"} />
       <Container maxWidth="lg">
+        <Box sx={{ color: "red" }} pt={1}>
+          Attention, je ne prends actuellement plus de nouveaux patients (pour
+          une période non définie), merci de votre compréhension. Les patients
+          déjà en suivi peuvent toujours prendre rendez-vous directement par
+          mail : sarah roggi.dieteticienne@gmail.com
+        </Box>
         <Grid container py={5} spacing={5}>
           <Grid item xs={12} md={6}>
             <SuiviWithoutSubtitle
@@ -28,7 +34,7 @@ export default function Distance() {
                 textAlign={{ xs: "start", md: "center" }}
                 fontSize={{ xs: "small", md: "medium" }}
               >
-                <Button
+                {/*<Button
                   component={Link}
                   underline="hover"
                   to="/meeting"
@@ -36,7 +42,7 @@ export default function Distance() {
                   color="primary"
                 >
                   Prendre rendez-vous
-                </Button>
+          </Button>*/}
               </Box>
               <Typography py={3}>
                 Le déroulé sera le même que pour une consultation à domicile,

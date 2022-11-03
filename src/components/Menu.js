@@ -7,16 +7,16 @@ import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
 import MenuItem from "@mui/material/MenuItem";
 import { Menu } from "@mui/material";
-import { NavLink,useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 const pages = [
   { label: "Accueil", route: "/" },
   { label: "À propos", route: "/about" },
   { label: "Consultations à domicile", route: "/domicile" },
   { label: "Suivi à distance", route: "/distance" },
-  { label: "Prendre RDV", route: "/meeting" },
-  { label: "Contact", route: "/contact" },
-  {label: "Boutique", route: "/boutique"}
+  //{ label: "Prendre RDV", route: "/meeting" },
+  //{ label: "Contact", route: "/contact" },
+  { label: "Boutique", route: "/boutique" },
 ];
 
 const LinkBehavior = React.forwardRef((props, ref) => {
@@ -34,7 +34,7 @@ const LinkBehavior = React.forwardRef((props, ref) => {
 
 export default function MenuDisplay() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
-  const {location}=useLocation();
+  const { location } = useLocation();
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
   };
@@ -44,7 +44,7 @@ export default function MenuDisplay() {
   };
 
   return (
-   <Container
+    <Container
       maxWidth={false}
       sx={{
         borderTop: { md: "1px solid lightgrey", xs: "" },
@@ -84,7 +84,7 @@ export default function MenuDisplay() {
             {pages.map((page) => (
               <MenuItem key={page.label} onClick={handleCloseNavMenu}>
                 <Button
-                size="small"
+                  size="small"
                   LinkComponent={LinkBehavior}
                   to={page.route}
                   key={page.label}
